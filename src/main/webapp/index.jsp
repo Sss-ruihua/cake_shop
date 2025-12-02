@@ -2,7 +2,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>传智店 - 首页</title>
+    <title>环创店 - 首页</title>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="css/style.css">
@@ -219,7 +219,7 @@
     <!-- 顶部导航栏 -->
     <header class="header">
         <div class="nav-container">
-            <a href="index.jsp" class="logo">传智店</a>
+            <a href="index.jsp" class="logo">环创店</a>
             <nav>
                 <ul class="nav-menu">
                     <li><a href="index.jsp" class="active">首页</a></li>
@@ -243,7 +243,7 @@
     <!-- 主内容区 -->
     <main class="main-container">
         <section class="welcome-section">
-            <h1 class="welcome-title">欢迎来到传智店</h1>
+            <h1 class="welcome-title">欢迎来到环创店</h1>
             <p class="welcome-subtitle">发现美味蛋糕，享受甜蜜生活</p>
 
             <div class="cta-buttons">

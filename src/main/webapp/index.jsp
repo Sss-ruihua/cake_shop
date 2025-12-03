@@ -7,6 +7,17 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="css/style.css">
+    <script>
+        function goToDetail(event, goodsId) {
+            if (goodsId && goodsId !== 'null') {
+                window.location.href = 'goods?action=detail&goodsId=' + goodsId;
+            }
+        }
+
+        function showDemoMessage(goodsName) {
+            alert('您点击的是示例商品：' + goodsName + '\n\n实际使用时，这里会跳转到真实的商品详情页面。');
+        }
+    </script>
     <style>
         * {
             margin: 0;
@@ -363,7 +374,7 @@
             <h2 class="section-title">精选商品</h2>
             <div class="products-grid">
                 <%
-                    // 从session中获取动态加载的商品数据
+                    // 从request中获取动态加载的商品数据
                     List<Goods> goodsList = (List<Goods>) request.getAttribute("goodsList");
                     Map<Integer, String> typeMap = (Map<Integer, String>) request.getAttribute("typeMap");
 
@@ -372,7 +383,7 @@
                             String typeName = typeMap != null ? typeMap.get(goods.getTypeId()) : "未分类";
                             String imageUrl = goods.getCoverImage() != null && !goods.getCoverImage().isEmpty() ? goods.getCoverImage() : "images/default.jpg";
                 %>
-                <div class="product-card">
+                <div class="product-card" onclick="goToDetail(event, '<%= goods.getGoodsId() %>')" style="cursor: pointer;">
                     <img src="<%= imageUrl %>" alt="<%= goods.getGoodsName() %>" class="product-image">
                     <div class="product-info">
                         <div class="product-category"><%= typeName %></div>
@@ -380,102 +391,18 @@
                         <p class="product-description"><%= goods.getDescription() %></p>
                         <div class="product-price">¥<%= String.format("%.2f", goods.getPrice()) %></div>
                         <div class="product-actions">
-                            <a href="cart?action=add&goodsId=<%= goods.getGoodsId() %>" class="btn-add-cart">加入购物车</a>
-                            <a href="detail?id=<%= goods.getGoodsId() %>" class="btn-view-detail">查看详情</a>
+                            <a href="cart?action=add&goodsId=<%= goods.getGoodsId() %>" class="btn-add-cart" onclick="event.stopPropagation()">加入购物车</a>
+                            <a href="goods?action=detail&goodsId=<%= goods.getGoodsId() %>" class="btn-view-detail" onclick="event.stopPropagation()">查看详情</a>
                         </div>
                     </div>
                 </div>
                 <%
                         }
                     } else {
-                        // 如果没有动态数据，显示默认静态商品
-                %>
-                <!-- 马卡龙系列 -->
-                <div class="product-card">
-                    <img src="images/macaron1.jpg" alt="静态彩色马卡龙" class="product-image">
-                    <div class="product-info">
-                        <div class="product-category">马卡龙</div>
-                        <h3 class="product-name">彩色马卡龙</h3>
-                        <p class="product-description">经典的法式马卡龙，多种口味，色彩缤纷，口感层次丰富</p>
-                        <div class="product-price">¥38.00</div>
-                        <div class="product-actions">
-                            <a href="#" class="btn-add-cart">加入购物车</a>
-                            <a href="#" class="btn-view-detail">查看详情</a>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="product-card">
-                    <img src="images/macaron2.jpg" alt="马卡龙塔" class="product-image">
-                    <div class="product-info">
-                        <div class="product-category">马卡龙</div>
-                        <h3 class="product-name">彩虹马卡龙塔</h3>
-                        <p class="product-description">多层次马卡龙塔，适合生日聚会和庆典，视觉震撼</p>
-                        <div class="product-price">¥128.00</div>
-                        <div class="product-actions">
-                            <a href="#" class="btn-add-cart">加入购物车</a>
-                            <a href="#" class="btn-view-detail">查看详情</a>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="product-card">
-                    <img src="images/macaron3.jpg" alt="精选马卡龙" class="product-image">
-                    <div class="product-info">
-                        <div class="product-category">马卡龙</div>
-                        <h3 class="product-name">精选马卡龙礼盒</h3>
-                        <p class="product-description">包含巧克力、草莓、香草等经典口味，包装精美</p>
-                        <div class="product-price">¥88.00</div>
-                        <div class="product-actions">
-                            <a href="#" class="btn-add-cart">加入购物车</a>
-                            <a href="#" class="btn-view-detail">查看详情</a>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- 慕斯蛋糕系列 -->
-                <div class="product-card">
-                    <img src="images/mousse1.jpg" alt="巧克力慕斯蛋糕" class="product-image">
-                    <div class="product-info">
-                        <div class="product-category">慕斯蛋糕</div>
-                        <h3 class="product-name">巧克力慕斯蛋糕</h3>
-                        <p class="product-description">浓郁巧克力慕斯，搭配新鲜浆果，口感丝滑，巧克力爱好者的首选</p>
-                        <div class="product-price">¥68.00</div>
-                        <div class="product-actions">
-                            <a href="#" class="btn-add-cart">加入购物车</a>
-                            <a href="#" class="btn-view-detail">查看详情</a>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="product-card">
-                    <img src="images/mousse2.jpg" alt="草莓慕斯蛋糕" class="product-image">
-                    <div class="product-info">
-                        <div class="product-category">慕斯蛋糕</div>
-                        <h3 class="product-name">草莓慕斯蛋糕</h3>
-                        <p class="product-description">粉色甜美造型，新鲜草莓装饰，口感轻盈，适合闺蜜聚会</p>
-                        <div class="product-price">¥58.00</div>
-                        <div class="product-actions">
-                            <a href="#" class="btn-add-cart">加入购物车</a>
-                            <a href="#" class="btn-view-detail">查看详情</a>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="product-card">
-                    <img src="images/mousse3.jpg" alt="抹茶慕斯蛋糕" class="product-image">
-                    <div class="product-info">
-                        <div class="product-category">慕斯蛋糕</div>
-                        <h3 class="product-name">抹茶慕斯蛋糕</h3>
-                        <p class="product-description">日式风格，绿色层次分明，抹茶与红豆的完美搭配</p>
-                        <div class="product-price">¥62.00</div>
-                        <div class="product-actions">
-                            <a href="#" class="btn-add-cart">加入购物车</a>
-                            <a href="#" class="btn-view-detail">查看详情</a>
-                        </div>
-                    </div>
-                </div>
-                    <%
+                        // 如果没有动态数据，跳转到错误页面
+                        request.setAttribute("error", "暂无商品数据，请稍后再试或联系管理员");
+                        request.getRequestDispatcher("/error.jsp").forward(request, response);
+                        return;
                     }
                     %>
             </div>

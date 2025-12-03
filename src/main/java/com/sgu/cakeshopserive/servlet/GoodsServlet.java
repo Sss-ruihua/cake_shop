@@ -1,9 +1,9 @@
 package com.sgu.cakeshopserive.servlet;
 
-import com.sgu.cakeshopserive.dao.GoodsDao;
-import com.sgu.cakeshopserive.dao.TypeDao;
+import com.sgu.cakeshopserive.common.Constants;
+import com.sgu.cakeshopserive.common.Result;
 import com.sgu.cakeshopserive.model.Goods;
-import com.sgu.cakeshopserive.model.Type;
+import com.sgu.cakeshopserive.service.GoodsService;
 
 import javax.servlet.ServletException;
 import javax.servlet.annotation.WebServlet;
@@ -13,10 +13,13 @@ import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.util.List;
 
+/**
+ * 商品控制器
+ * 职责：处理HTTP请求，调用业务服务，返回响应
+ */
 @WebServlet(name = "GoodsServlet", urlPatterns = {"/goods", "/index"})
 public class GoodsServlet extends HttpServlet {
-    private GoodsDao goodsDao = new GoodsDao();
-    private TypeDao typeDao = new TypeDao();
+    private GoodsService goodsService = new GoodsService();
 
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
@@ -51,57 +54,61 @@ public class GoodsServlet extends HttpServlet {
             }
         } catch (Exception e) {
             e.printStackTrace();
-            request.setAttribute("error", "获取商品信息失败");
+            request.setAttribute("error", "获取商品信息失败：" + e.getMessage());
             request.getRequestDispatcher("/error.jsp").forward(request, response);
         }
     }
 
+    /**
+     * 获取首页推荐商品
+     */
     private void listGoods(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
 
-        // 获取所有商品
-        List<Goods> allGoods = goodsDao.getAllGoods();
+        Result<GoodsService.IndexRecommendations> result = goodsService.getIndexRecommendations();
 
-        // 获取推荐商品
-        List<Goods> hotGoods = goodsDao.getHotGoods(6);
-        List<Goods> newGoods = goodsDao.getNewGoods(6);
-        List<Goods> bannerGoods = goodsDao.getBannerGoods(3);
+        if (result.isSuccess()) {
+            GoodsService.IndexRecommendations recommendations = result.getData();
+            request.setAttribute("goodsList", goodsService.getAllGoods().getData());
+            request.setAttribute("hotGoods", recommendations.getHotGoods());
+            request.setAttribute("newGoods", recommendations.getNewGoods());
+            request.setAttribute("bannerGoods", recommendations.getBannerGoods());
+            request.setAttribute("types", recommendations.getTypes());
+            request.setAttribute("typeMap", recommendations.getTypeMap());
 
-        // 获取所有分类
-        List<Type> types = typeDao.getAllTypes();
-
-        request.setAttribute("goodsList", allGoods);
-        request.setAttribute("hotGoods", hotGoods);
-        request.setAttribute("newGoods", newGoods);
-        request.setAttribute("bannerGoods", bannerGoods);
-        request.setAttribute("types", types);
-
-        // 创建类型映射，方便在JSP中使用
-        java.util.Map<Integer, String> typeMap = new java.util.HashMap<>();
-        for (Type type : types) {
-            typeMap.put(type.getTypeId(), type.getTypeName());
+            request.getRequestDispatcher("/index.jsp").forward(request, response);
+        } else {
+            request.setAttribute("error", result.getMessage());
+            request.getRequestDispatcher("/error.jsp").forward(request, response);
         }
-        request.setAttribute("typeMap", typeMap);
-
-        request.getRequestDispatcher("/index.jsp").forward(request, response);
     }
 
+    /**
+     * 显示商品详情
+     */
     private void showGoodsDetail(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
 
-        int goodsId = Integer.parseInt(request.getParameter("goodsId"));
-        Goods goods = goodsDao.getGoodsById(goodsId);
+        try {
+            int goodsId = Integer.parseInt(request.getParameter("goodsId"));
+            Result<Goods> result = goodsService.getGoodsById(goodsId);
 
-        if (goods == null) {
-            request.setAttribute("error", "商品不存在");
+            if (result.isSuccess()) {
+                request.setAttribute("goods", result.getData());
+                request.getRequestDispatcher("/goods-detail.jsp").forward(request, response);
+            } else {
+                request.setAttribute("error", result.getMessage());
+                request.getRequestDispatcher("/error.jsp").forward(request, response);
+            }
+        } catch (NumberFormatException e) {
+            request.setAttribute("error", "商品ID格式错误");
             request.getRequestDispatcher("/error.jsp").forward(request, response);
-            return;
         }
-
-        request.setAttribute("goods", goods);
-        request.getRequestDispatcher("/goods-detail.jsp").forward(request, response);
     }
 
+    /**
+     * 搜索商品
+     */
     private void searchGoods(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
 
@@ -111,36 +118,65 @@ public class GoodsServlet extends HttpServlet {
             return;
         }
 
-        List<Goods> searchResults = goodsDao.searchGoods(keyword.trim());
-        List<Type> types = typeDao.getAllTypes();
+        Result<List<Goods>> result = goodsService.searchGoods(keyword.trim());
 
-        request.setAttribute("searchResults", searchResults);
-        request.setAttribute("keyword", keyword);
-        request.setAttribute("types", types);
+        if (result.isSuccess()) {
+            // 同时获取分类信息用于显示
+            Result<GoodsService.IndexRecommendations> recommendationsResult = goodsService.getIndexRecommendations();
+            List<com.sgu.cakeshopserive.model.Type> types = recommendationsResult.isSuccess() ?
+                recommendationsResult.getData().getTypes() : null;
 
-        request.getRequestDispatcher("/search.jsp").forward(request, response);
+            request.setAttribute("searchResults", result.getData());
+            request.setAttribute("keyword", keyword);
+            request.setAttribute("types", types);
+
+            request.getRequestDispatcher("/search.jsp").forward(request, response);
+        } else {
+            request.setAttribute("error", result.getMessage());
+            request.getRequestDispatcher("/error.jsp").forward(request, response);
+        }
     }
 
+    /**
+     * 根据分类显示商品
+     */
     private void listGoodsByType(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
 
-        int typeId = Integer.parseInt(request.getParameter("typeId"));
-        Type type = typeDao.getTypeById(typeId);
+        try {
+            int typeId = Integer.parseInt(request.getParameter("typeId"));
+            Result<List<Goods>> result = goodsService.getGoodsByType(typeId);
 
-        if (type == null) {
-            request.setAttribute("error", "分类不存在");
+            if (result.isSuccess()) {
+                // 同时获取所有分类信息
+                Result<GoodsService.IndexRecommendations> recommendationsResult = goodsService.getIndexRecommendations();
+                List<com.sgu.cakeshopserive.model.Type> types = recommendationsResult.isSuccess() ?
+                    recommendationsResult.getData().getTypes() : null;
+
+                // 获取当前分类信息
+                com.sgu.cakeshopserive.model.Type currentType = null;
+                if (types != null) {
+                    for (com.sgu.cakeshopserive.model.Type type : types) {
+                        if (type.getTypeId() == typeId) {
+                            currentType = type;
+                            break;
+                        }
+                    }
+                }
+
+                request.setAttribute("goodsList", result.getData());
+                request.setAttribute("currentType", currentType);
+                request.setAttribute("types", types);
+
+                request.getRequestDispatcher("/category.jsp").forward(request, response);
+            } else {
+                request.setAttribute("error", result.getMessage());
+                request.getRequestDispatcher("/error.jsp").forward(request, response);
+            }
+        } catch (NumberFormatException e) {
+            request.setAttribute("error", "分类ID格式错误");
             request.getRequestDispatcher("/error.jsp").forward(request, response);
-            return;
         }
-
-        List<Goods> goodsList = goodsDao.getGoodsByTypeId(typeId);
-        List<Type> types = typeDao.getAllTypes();
-
-        request.setAttribute("goodsList", goodsList);
-        request.setAttribute("currentType", type);
-        request.setAttribute("types", types);
-
-        request.getRequestDispatcher("/category.jsp").forward(request, response);
     }
 
     @Override

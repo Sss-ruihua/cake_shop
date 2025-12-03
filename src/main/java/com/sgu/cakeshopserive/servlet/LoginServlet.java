@@ -1,13 +1,23 @@
 package com.sgu.cakeshopserive.servlet;
 
-import java.io.*;
-import java.sql.*;
+import com.sgu.cakeshopserive.common.Constants;
+import com.sgu.cakeshopserive.common.Result;
+import com.sgu.cakeshopserive.model.User;
+import com.sgu.cakeshopserive.service.UserService;
+
 import javax.servlet.ServletException;
 import javax.servlet.annotation.WebServlet;
 import javax.servlet.http.*;
+import java.io.IOException;
 
+/**
+ * 登录控制器
+ * 职责：处理HTTP请求，调用业务服务，返回响应
+ */
 @WebServlet(name = "loginServlet", value = "/login")
 public class LoginServlet extends HttpServlet {
+
+    private UserService userService = new UserService();
 
     @Override
     protected void doPost(HttpServletRequest request, HttpServletResponse response)
@@ -20,89 +30,34 @@ public class LoginServlet extends HttpServlet {
         String username = request.getParameter("username");
         String password = request.getParameter("password");
 
-        // 验证必填字段
-        if (username == null || username.trim().isEmpty() ||
-            password == null || password.trim().isEmpty()) {
+        // 调用业务服务处理登录
+        Result<User> result = userService.login(username, password);
 
-            response.sendRedirect("login.jsp?error=required");
-            return;
-        }
+        if (result.isSuccess()) {
+            // 登录成功，创建会话
+            User user = result.getData();
+            HttpSession session = request.getSession();
 
-        Connection conn = null;
-        PreparedStatement pstmt = null;
+            // 存储用户信息到会话中
+            session.setAttribute(Constants.SESSION_USER_ID, user.getUserId());
+            session.setAttribute(Constants.SESSION_USERNAME, user.getUsername());
+            session.setAttribute(Constants.SESSION_REAL_NAME, user.getRealName());
+            session.setAttribute(Constants.SESSION_EMAIL, user.getEmail());
+            session.setAttribute(Constants.SESSION_PHONE, user.getPhone());
+            session.setAttribute(Constants.SESSION_ADDRESS, user.getAddress());
+            session.setAttribute(Constants.SESSION_IS_ADMIN, user.isAdmin());
+            session.setAttribute(Constants.SESSION_IS_LOGGED_IN, true);
 
-        try {
-            // 使用DBUtils获取数据库连接
-            conn = com.sgu.cakeshopserive.utils.DBUtils.getConnection();
+            // 设置会话超时时间
+            session.setMaxInactiveInterval(Constants.SESSION_TIMEOUT * 60);
 
-            // 查询用户信息
-            String sql = "SELECT user_id, username, password, real_name, email, phone, address, is_admin, is_active " +
-                        "FROM user WHERE username = ?";
-
-            pstmt = conn.prepareStatement(sql);
-            pstmt.setString(1, username);
-            ResultSet rs = pstmt.executeQuery();
-
-            if (rs.next()) {
-                // 验证密码
-                String storedPassword = rs.getString("password");
-                boolean isActive = rs.getBoolean("is_active");
-
-                if (!isActive) {
-                    // 账户未激活
-                    response.sendRedirect("login.jsp?error=account_inactive");
-                    rs.close();
-                    pstmt.close();
-                    return;
-                }
-
-                // 使用PasswordUtil验证密码
-                if (com.sgu.cakeshopserive.utils.PasswordUtil.verifyPassword(password, storedPassword)) {
-                    // 登录成功，创建会话
-                    HttpSession session = request.getSession();
-
-                    // 存储用户信息到会话中
-                    session.setAttribute("user_id", rs.getInt("user_id"));
-                    session.setAttribute("username", rs.getString("username"));
-                    session.setAttribute("real_name", rs.getString("real_name"));
-                    session.setAttribute("email", rs.getString("email"));
-                    session.setAttribute("phone", rs.getString("phone"));
-                    session.setAttribute("address", rs.getString("address"));
-                    session.setAttribute("is_admin", rs.getBoolean("is_admin"));
-                    session.setAttribute("is_logged_in", true);
-
-                    // 设置会话超时时间（30分钟）
-                    session.setMaxInactiveInterval(30 * 60);
-
-                    rs.close();
-                    pstmt.close();
-
-                    // 登录成功，跳转到首页
-                    response.sendRedirect("index.jsp?success=login");
-                } else {
-                    // 密码错误
-                    response.sendRedirect("login.jsp?error=invalid_credentials");
-                    rs.close();
-                    pstmt.close();
-                }
-            } else {
-                // 用户不存在
-                response.sendRedirect("login.jsp?error=not_found");
-                rs.close();
-                pstmt.close();
-            }
-
-        } catch (Exception e) {
-            e.printStackTrace();
-            response.sendRedirect("login.jsp?error=system");
-        } finally {
-            // 关闭资源
-            try {
-                if (pstmt != null) pstmt.close();
-                if (conn != null) conn.close();
-            } catch (SQLException e) {
-                e.printStackTrace();
-            }
+            // 登录成功，跳转到首页
+            response.sendRedirect("index.jsp?success=login");
+        } else {
+            // 登录失败，根据错误类型重定向
+            String errorCode = result.getCode();
+            String errorParam = getErrorParameter(errorCode);
+            response.sendRedirect("login.jsp?error=" + errorParam);
         }
     }
 
@@ -111,5 +66,26 @@ public class LoginServlet extends HttpServlet {
             throws ServletException, IOException {
         // GET请求直接转发到登录页面
         request.getRequestDispatcher("login.jsp").forward(request, response);
+    }
+
+    /**
+     * 将错误代码转换为JSP页面参数
+     * @param errorCode 业务错误代码
+     * @return 页面错误参数
+     */
+    private String getErrorParameter(String errorCode) {
+        switch (errorCode) {
+            case Constants.CODE_PARAM_ERROR:
+                return "required";
+            case Constants.CODE_USER_NOT_FOUND:
+                return "not_found";
+            case Constants.CODE_PASSWORD_ERROR:
+                return "invalid_credentials";
+            case Constants.CODE_ACCOUNT_INACTIVE:
+                return "account_inactive";
+            case Constants.CODE_ERROR:
+            default:
+                return "system";
+        }
     }
 }

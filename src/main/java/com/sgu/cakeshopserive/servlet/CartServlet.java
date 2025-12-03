@@ -2,6 +2,7 @@ package com.sgu.cakeshopserive.servlet;
 
 import com.sgu.cakeshopserive.dao.GoodsDao;
 import com.sgu.cakeshopserive.model.Goods;
+import com.sgu.cakeshopserive.common.Result;
 
 import javax.servlet.ServletException;
 import javax.servlet.annotation.WebServlet;
@@ -10,6 +11,7 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
 import java.io.IOException;
+import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -45,13 +47,16 @@ public class CartServlet extends HttpServlet {
                 case "clear":
                     clearCart(request, response);
                     break;
+                case "count":
+                    getCartCount(request, response);
+                    break;
                 default:
                     viewCart(request, response);
                     break;
             }
         } catch (Exception e) {
             e.printStackTrace();
-            request.setAttribute("error", "购物车操作失败");
+            request.setAttribute("error", "购物车操作失败: " + e.getMessage());
             request.getRequestDispatcher("/error.jsp").forward(request, response);
         }
     }
@@ -59,12 +64,17 @@ public class CartServlet extends HttpServlet {
     private void addToCart(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
 
-        int goodsId = Integer.parseInt(request.getParameter("goodsId"));
-        Goods goods = goodsDao.getGoodsById(goodsId);
+        int goodsId;
+        try {
+            goodsId = Integer.parseInt(request.getParameter("goodsId"));
+        } catch (NumberFormatException e) {
+            sendJsonResponse(response, Result.error("商品ID格式错误"));
+            return;
+        }
 
+        Goods goods = goodsDao.getGoodsById(goodsId);
         if (goods == null) {
-            request.setAttribute("error", "商品不存在");
-            request.getRequestDispatcher("/error.jsp").forward(request, response);
+            sendJsonResponse(response, Result.error("商品不存在"));
             return;
         }
 
@@ -80,8 +90,7 @@ public class CartServlet extends HttpServlet {
         // 检查库存
         int currentQuantity = cart.getOrDefault(goodsId, 0);
         if (currentQuantity >= goods.getStock()) {
-            request.setAttribute("error", "商品库存不足");
-            request.getRequestDispatcher("/index").forward(request, response);
+            sendJsonResponse(response, Result.error("商品库存不足，当前库存: " + goods.getStock()));
             return;
         }
 
@@ -89,14 +98,31 @@ public class CartServlet extends HttpServlet {
         cart.put(goodsId, cart.getOrDefault(goodsId, 0) + 1);
         updateCartCount(session, cart);
 
-        request.setAttribute("successMessage", "商品已添加到购物车");
-        request.getRequestDispatcher("/index").forward(request, response);
+        // 检查是否为AJAX请求
+        boolean isAjax = "XMLHttpRequest".equals(request.getHeader("X-Requested-With"));
+
+        String referer = request.getHeader("Referer");
+        if (isAjax || (referer != null && (referer.contains("cart") || referer.contains("detail") || referer.contains("goods")))) {
+            // 如果是AJAX请求或者是从相关页面来的，返回JSON响应
+            response.setContentType("application/json;charset=UTF-8");
+            sendJsonResponse(response, Result.success("商品已添加到购物车"));
+        } else {
+            // 如果是从首页来的普通请求，使用页面跳转
+            request.setAttribute("successMessage", "商品已添加到购物车");
+            request.getRequestDispatcher("/index").forward(request, response);
+        }
     }
 
     private void removeFromCart(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
 
-        int goodsId = Integer.parseInt(request.getParameter("goodsId"));
+        int goodsId;
+        try {
+            goodsId = Integer.parseInt(request.getParameter("goodsId"));
+        } catch (NumberFormatException e) {
+            sendJsonResponse(response, Result.error("商品ID格式错误"));
+            return;
+        }
 
         HttpSession session = request.getSession();
         @SuppressWarnings("unchecked")
@@ -105,16 +131,26 @@ public class CartServlet extends HttpServlet {
         if (cart != null) {
             cart.remove(goodsId);
             updateCartCount(session, cart);
+            sendJsonResponse(response, Result.success("商品已从购物车移除"));
+            return;
         }
 
-        request.getRequestDispatcher("/cart?action=view").forward(request, response);
+        sendJsonResponse(response, Result.error("购物车为空"));
     }
 
     private void updateCart(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
 
-        int goodsId = Integer.parseInt(request.getParameter("goodsId"));
-        int quantity = Integer.parseInt(request.getParameter("quantity"));
+        int goodsId;
+        int quantity;
+
+        try {
+            goodsId = Integer.parseInt(request.getParameter("goodsId"));
+            quantity = Integer.parseInt(request.getParameter("quantity"));
+        } catch (NumberFormatException e) {
+            sendJsonResponse(response, Result.error("参数格式错误"));
+            return;
+        }
 
         if (quantity <= 0) {
             removeFromCart(request, response);
@@ -123,8 +159,7 @@ public class CartServlet extends HttpServlet {
 
         Goods goods = goodsDao.getGoodsById(goodsId);
         if (goods == null) {
-            request.setAttribute("error", "商品不存在");
-            request.getRequestDispatcher("/error.jsp").forward(request, response);
+            sendJsonResponse(response, Result.error("商品不存在"));
             return;
         }
 
@@ -134,16 +169,17 @@ public class CartServlet extends HttpServlet {
 
         if (cart != null) {
             if (quantity > goods.getStock()) {
-                request.setAttribute("error", "商品库存不足");
-                request.getRequestDispatcher("/cart?action=view").forward(request, response);
+                sendJsonResponse(response, Result.error("商品库存不足，当前库存: " + goods.getStock()));
                 return;
             }
 
             cart.put(goodsId, quantity);
             updateCartCount(session, cart);
+            sendJsonResponse(response, Result.success("数量更新成功"));
+            return;
         }
 
-        request.getRequestDispatcher("/cart?action=view").forward(request, response);
+        sendJsonResponse(response, Result.error("购物车为空"));
     }
 
     private void clearCart(HttpServletRequest request, HttpServletResponse response)
@@ -153,8 +189,7 @@ public class CartServlet extends HttpServlet {
         session.removeAttribute("cart");
         session.setAttribute("cartCount", 0);
 
-        request.setAttribute("successMessage", "购物车已清空");
-        request.getRequestDispatcher("/index").forward(request, response);
+        sendJsonResponse(response, Result.success("购物车已清空"));
     }
 
     private void viewCart(HttpServletRequest request, HttpServletResponse response)
@@ -187,8 +222,14 @@ public class CartServlet extends HttpServlet {
                     cartItems.add(item);
                     totalAmount += item.getSubtotal();
                     totalQuantity += quantity;
+                } else {
+                    // 商品不存在，从购物车中移除
+                    cart.remove(goodsId);
                 }
             }
+
+            // 更新购物车数量
+            updateCartCount(session, cart);
 
             request.setAttribute("cartItems", cartItems);
             request.setAttribute("totalAmount", totalAmount);
@@ -239,6 +280,36 @@ public class CartServlet extends HttpServlet {
 
         public void setSubtotal(double subtotal) {
             this.subtotal = subtotal;
+        }
+    }
+
+    /**
+     * 获取购物车数量（AJAX接口）
+     */
+    private void getCartCount(HttpServletRequest request, HttpServletResponse response)
+            throws ServletException, IOException {
+
+        HttpSession session = request.getSession();
+        @SuppressWarnings("unchecked")
+        Map<Integer, Integer> cart = (Map<Integer, Integer>) session.getAttribute("cart");
+
+        int count = 0;
+        if (cart != null) {
+            count = cart.values().stream().mapToInt(Integer::intValue).sum();
+        }
+
+        sendJsonResponse(response, Result.success(count));
+    }
+
+    /**
+     * 发送JSON响应
+     */
+    private void sendJsonResponse(HttpServletResponse response, Result result) throws IOException {
+        response.setContentType("application/json;charset=UTF-8");
+        response.setHeader("Cache-Control", "no-cache");
+
+        try (PrintWriter out = response.getWriter()) {
+            out.print(result.toJson());
         }
     }
 }

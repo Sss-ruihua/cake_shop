@@ -17,6 +17,169 @@
         function showDemoMessage(goodsName) {
             alert('您点击的是示例商品：' + goodsName + '\n\n实际使用时，这里会跳转到真实的商品详情页面。');
         }
+
+        // AJAX添加商品到购物车
+        function addToCart(goodsId) {
+            const xhr = new XMLHttpRequest();
+            xhr.open('POST', 'cart?action=add&goodsId=' + goodsId, true);
+            xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
+            xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
+
+            // 显示加载状态
+            showNotification('正在添加到购物车...', 'info');
+
+            xhr.onreadystatechange = function() {
+                if (xhr.readyState === 4) {
+                    if (xhr.status === 200) {
+                        try {
+                            const response = JSON.parse(xhr.responseText);
+                            if (response.success) {
+                                showNotification(response.message, 'success');
+                                updateCartCount(); // 更新购物车数量
+                            } else {
+                                showNotification(response.message, 'error');
+                            }
+                        } catch (e) {
+                            // 如果不是JSON响应，可能是页面跳转
+                            console.log('Response:', xhr.responseText);
+                            showNotification('商品已添加到购物车', 'success');
+                            updateCartCount();
+                        }
+                    } else {
+                        showNotification('添加失败，请重试', 'error');
+                    }
+                }
+            };
+
+            xhr.send();
+        }
+
+        // 更新购物车数量显示
+        function updateCartCount() {
+            const xhr = new XMLHttpRequest();
+            xhr.open('GET', 'cart?action=count', true);
+            xhr.onreadystatechange = function() {
+                if (xhr.readyState === 4 && xhr.status === 200) {
+                    try {
+                        const response = JSON.parse(xhr.responseText);
+                        if (response.success) {
+                            const cartCountElement = document.querySelector('.cart-count');
+                            if (cartCountElement) {
+                                cartCountElement.textContent = response.data || 0;
+                                // 添加动画效果
+                                cartCountElement.style.transform = 'scale(1.3)';
+                                setTimeout(() => {
+                                    cartCountElement.style.transform = 'scale(1)';
+                                }, 300);
+                            }
+                        }
+                    } catch (e) {
+                        console.error('Failed to parse cart count response:', e);
+                    }
+                }
+            };
+            xhr.send();
+        }
+
+        // 显示通知消息
+        function showNotification(message, type) {
+            // 检查是否已有通知，如果有则移除
+            const existingNotifications = document.querySelectorAll('.notification');
+            existingNotifications.forEach(notif => {
+                if (notif.parentNode) {
+                    notif.parentNode.removeChild(notif);
+                }
+            });
+
+            // 创建通知元素
+            const notification = document.createElement('div');
+            notification.className = 'notification notification-' + type;
+            notification.textContent = message;
+
+            // 设置样式
+            notification.style.cssText = `
+                position: fixed;
+                top: 80px;
+                right: 20px;
+                padding: 14px 24px;
+                border-radius: 8px;
+                color: white;
+                font-weight: 500;
+                z-index: 10000;
+                box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+                opacity: 0;
+                transform: translateX(100%) translateY(-10px);
+                transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+                max-width: 320px;
+                font-size: 14px;
+                line-height: 1.4;
+                display: flex;
+                align-items: center;
+                gap: 10px;
+            `;
+
+            // 根据类型设置背景色和图标
+            let icon = '';
+            let bgColor = '';
+            switch (type) {
+                case 'success':
+                    bgColor = '#4CAF50';
+                    icon = '✓';
+                    break;
+                case 'error':
+                    bgColor = '#F44336';
+                    icon = '✗';
+                    break;
+                case 'info':
+                    bgColor = '#FF9800';
+                    icon = '⚡';
+                    break;
+                default:
+                    bgColor = '#5D4037';
+                    icon = 'ℹ';
+            }
+
+            notification.style.backgroundColor = bgColor;
+
+            // 添加图标
+            const iconElement = document.createElement('span');
+            iconElement.style.cssText = `
+                font-size: 18px;
+                font-weight: bold;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                min-width: 20px;
+            `;
+            iconElement.textContent = icon;
+
+            notification.insertBefore(iconElement, notification.firstChild);
+
+            // 添加到页面
+            document.body.appendChild(notification);
+
+            // 显示动画
+            setTimeout(() => {
+                notification.style.opacity = '1';
+                notification.style.transform = 'translateX(0) translateY(0)';
+            }, 50);
+
+            // 自动隐藏
+            setTimeout(() => {
+                notification.style.opacity = '0';
+                notification.style.transform = 'translateX(100%) translateY(-10px)';
+                setTimeout(() => {
+                    if (notification.parentNode) {
+                        notification.parentNode.removeChild(notification);
+                    }
+                }, 300);
+            }, type === 'info' ? 2000 : 3000); // info类型显示时间更短
+        }
+
+        // 页面加载时更新购物车数量
+        document.addEventListener('DOMContentLoaded', function() {
+            updateCartCount();
+        });
     </script>
     <style>
         * {
@@ -334,9 +497,9 @@
             </nav>
             <div class="nav-actions">
                 <a href="#" class="search-icon">🔍</a>
-                <a href="#" class="cart-icon">
+                <a href="cart" class="cart-icon">
                     🛒
-                    <span class="cart-count">0</span>
+                    <span class="cart-count">${cartCount != null ? cartCount : 0}</span>
                 </a>
             </div>
         </div>
@@ -391,7 +554,7 @@
                         <p class="product-description"><%= goods.getDescription() %></p>
                         <div class="product-price">¥<%= String.format("%.2f", goods.getPrice()) %></div>
                         <div class="product-actions">
-                            <a href="cart?action=add&goodsId=<%= goods.getGoodsId() %>" class="btn-add-cart" onclick="event.stopPropagation()">加入购物车</a>
+                            <button class="btn-add-cart" onclick="event.stopPropagation(); addToCart(<%= goods.getGoodsId() %>)">加入购物车</button>
                             <a href="goods?action=detail&goodsId=<%= goods.getGoodsId() %>" class="btn-view-detail" onclick="event.stopPropagation()">查看详情</a>
                         </div>
                     </div>

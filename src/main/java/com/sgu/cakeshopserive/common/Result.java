@@ -79,4 +79,38 @@ public class Result<T> {
                 ", code='" + code + '\'' +
                 '}';
     }
+
+    /**
+     * 转换为JSON字符串
+     */
+    public String toJson() {
+        StringBuilder json = new StringBuilder();
+        json.append("{");
+        json.append("\"success\":").append(success);
+        json.append(",\"message\":\"").append(escapeJson(message)).append("\"");
+
+        if (data instanceof String) {
+            json.append(",\"data\":\"").append(escapeJson((String) data)).append("\"");
+        } else if (data != null) {
+            json.append(",\"data\":").append(escapeJson(data.toString()));
+        } else {
+            json.append(",\"data\":null");
+        }
+
+        json.append(",\"code\":\"").append(escapeJson(code)).append("\"");
+        json.append("}");
+        return json.toString();
+    }
+
+    /**
+     * JSON字符串转义
+     */
+    private String escapeJson(String str) {
+        if (str == null) return "";
+        return str.replace("\\", "\\\\")
+                .replace("\"", "\\\"")
+                .replace("\n", "\\n")
+                .replace("\r", "\\r")
+                .replace("\t", "\\t");
+    }
 }

@@ -1,0 +1,21 @@
+/* 环创店 - 页脚样式 */
+
+footer {
+    background-color: var(--primary-color);
+    color: white;
+    text-align: center;
+    padding: 30px 0;
+    margin-top: 50px;
+}
+
+footer p {
+    margin-bottom: 10px;
+}
+
+/* 页脚响应式设计 */
+@media (max-width: 768px) {
+    footer {
+        padding: 20px 0;
+        margin-top: 30px;
+    }
+}

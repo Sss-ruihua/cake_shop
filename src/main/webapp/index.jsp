@@ -1,4 +1,5 @@
 <%@ page contentType="text/html; charset=UTF-8" pageEncoding="UTF-8" %>
+<%@ page import="java.util.*, com.sgu.cakeshopserive.model.Goods" %>
 <!DOCTYPE html>
 <html>
 <head>
@@ -129,43 +130,7 @@
         .welcome-subtitle {
             color: #666;
             font-size: 18px;
-            margin-bottom: 30px;
-        }
-
-        .cta-buttons {
-            display: flex;
-            justify-content: center;
-            gap: 20px;
-            margin-top: 30px;
-        }
-
-        .btn-primary, .btn-secondary {
-            padding: 15px 30px;
-            border-radius: 4px;
-            text-decoration: none;
-            font-size: 16px;
-            font-weight: bold;
-            transition: all 0.3s;
-        }
-
-        .btn-primary {
-            background-color: #FF9800;
-            color: white;
-        }
-
-        .btn-primary:hover {
-            background-color: #F57C00;
-            transform: translateY(-2px);
-        }
-
-        .btn-secondary {
-            background-color: #5D4037;
-            color: white;
-        }
-
-        .btn-secondary:hover {
-            background-color: #4E342E;
-            transform: translateY(-2px);
+            margin-bottom: 0;
         }
 
         .features-section {
@@ -206,6 +171,120 @@
             line-height: 1.6;
         }
 
+        /* 商品展示区域 */
+        .products-section {
+            margin-top: 40px;
+        }
+
+        .section-title {
+            text-align: center;
+            color: #5D4037;
+            font-size: 32px;
+            margin-bottom: 40px;
+            font-weight: bold;
+        }
+
+        .products-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 30px;
+            margin-bottom: 40px;
+        }
+
+        .product-card {
+            background-color: white;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .product-card:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+        }
+
+        .product-image {
+            width: 100%;
+            height: 200px;
+            object-fit: cover;
+            transition: transform 0.3s ease;
+        }
+
+        .product-card:hover .product-image {
+            transform: scale(1.05);
+        }
+
+        .product-info {
+            padding: 20px;
+        }
+
+        .product-category {
+            color: #FF9800;
+            font-size: 14px;
+            font-weight: bold;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+        }
+
+        .product-name {
+            color: #5D4037;
+            font-size: 20px;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+
+        .product-description {
+            color: #666;
+            font-size: 14px;
+            line-height: 1.5;
+            margin-bottom: 15px;
+        }
+
+        .product-price {
+            color: #FF5722;
+            font-size: 24px;
+            font-weight: bold;
+            margin-bottom: 15px;
+        }
+
+        .product-actions {
+            display: flex;
+            gap: 10px;
+        }
+
+        .btn-add-cart, .btn-view-detail {
+            flex: 1;
+            padding: 10px;
+            border: none;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            text-align: center;
+        }
+
+        .btn-add-cart {
+            background-color: #FF9800;
+            color: white;
+        }
+
+        .btn-add-cart:hover {
+            background-color: #F57C00;
+        }
+
+        .btn-view-detail {
+            background-color: #5D4037;
+            color: white;
+        }
+
+        .btn-view-detail:hover {
+            background-color: #4E342E;
+        }
+
         footer {
             background-color: #5D4037;
             color: white;
@@ -226,8 +305,20 @@
                     <li><a href="#">商品分类 ▼</a></li>
                     <li><a href="#">热销</a></li>
                     <li><a href="#">新品</a></li>
+                    <%
+                        String username = (String) session.getAttribute("username");
+                        if (username == null) {
+                    %>
                     <li><a href="register.jsp">注册</a></li>
                     <li><a href="login.jsp">登录</a></li>
+                    <%
+                        } else {
+                    %>
+                    <li><a href="#">欢迎，<%= username %></a></li>
+                    <li><a href="logout">退出</a></li>
+                    <%
+                        }
+                    %>
                 </ul>
             </nav>
             <div class="nav-actions">
@@ -245,11 +336,6 @@
         <section class="welcome-section">
             <h1 class="welcome-title">欢迎来到环创店</h1>
             <p class="welcome-subtitle">发现美味蛋糕，享受甜蜜生活</p>
-
-            <div class="cta-buttons">
-                <a href="register.jsp" class="btn-primary">立即注册</a>
-                <a href="#" class="btn-secondary">浏览商品</a>
-            </div>
         </section>
 
         <section class="features-section">
@@ -271,10 +357,133 @@
                 <p class="feature-description">选用优质原料，严格品控，为您带来最佳的味觉体验</p>
             </div>
         </section>
+
+        <!-- 商品展示区域 -->
+        <section class="products-section">
+            <h2 class="section-title">精选商品</h2>
+            <div class="products-grid">
+                <%
+                    // 从session中获取动态加载的商品数据
+                    List<Goods> goodsList = (List<Goods>) request.getAttribute("goodsList");
+                    Map<Integer, String> typeMap = (Map<Integer, String>) request.getAttribute("typeMap");
+
+                    if (goodsList != null && !goodsList.isEmpty()) {
+                        for (Goods goods : goodsList) {
+                            String typeName = typeMap != null ? typeMap.get(goods.getTypeId()) : "未分类";
+                            String imageUrl = goods.getCoverImage() != null && !goods.getCoverImage().isEmpty() ? goods.getCoverImage() : "images/default.jpg";
+                %>
+                <div class="product-card">
+                    <img src="<%= imageUrl %>" alt="<%= goods.getGoodsName() %>" class="product-image">
+                    <div class="product-info">
+                        <div class="product-category"><%= typeName %></div>
+                        <h3 class="product-name"><%= goods.getGoodsName() %></h3>
+                        <p class="product-description"><%= goods.getDescription() %></p>
+                        <div class="product-price">¥<%= String.format("%.2f", goods.getPrice()) %></div>
+                        <div class="product-actions">
+                            <a href="cart?action=add&goodsId=<%= goods.getGoodsId() %>" class="btn-add-cart">加入购物车</a>
+                            <a href="detail?id=<%= goods.getGoodsId() %>" class="btn-view-detail">查看详情</a>
+                        </div>
+                    </div>
+                </div>
+                <%
+                        }
+                    } else {
+                        // 如果没有动态数据，显示默认静态商品
+                %>
+                <!-- 马卡龙系列 -->
+                <div class="product-card">
+                    <img src="images/macaron1.jpg" alt="静态彩色马卡龙" class="product-image">
+                    <div class="product-info">
+                        <div class="product-category">马卡龙</div>
+                        <h3 class="product-name">彩色马卡龙</h3>
+                        <p class="product-description">经典的法式马卡龙，多种口味，色彩缤纷，口感层次丰富</p>
+                        <div class="product-price">¥38.00</div>
+                        <div class="product-actions">
+                            <a href="#" class="btn-add-cart">加入购物车</a>
+                            <a href="#" class="btn-view-detail">查看详情</a>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="product-card">
+                    <img src="images/macaron2.jpg" alt="马卡龙塔" class="product-image">
+                    <div class="product-info">
+                        <div class="product-category">马卡龙</div>
+                        <h3 class="product-name">彩虹马卡龙塔</h3>
+                        <p class="product-description">多层次马卡龙塔，适合生日聚会和庆典，视觉震撼</p>
+                        <div class="product-price">¥128.00</div>
+                        <div class="product-actions">
+                            <a href="#" class="btn-add-cart">加入购物车</a>
+                            <a href="#" class="btn-view-detail">查看详情</a>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="product-card">
+                    <img src="images/macaron3.jpg" alt="精选马卡龙" class="product-image">
+                    <div class="product-info">
+                        <div class="product-category">马卡龙</div>
+                        <h3 class="product-name">精选马卡龙礼盒</h3>
+                        <p class="product-description">包含巧克力、草莓、香草等经典口味，包装精美</p>
+                        <div class="product-price">¥88.00</div>
+                        <div class="product-actions">
+                            <a href="#" class="btn-add-cart">加入购物车</a>
+                            <a href="#" class="btn-view-detail">查看详情</a>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 慕斯蛋糕系列 -->
+                <div class="product-card">
+                    <img src="images/mousse1.jpg" alt="巧克力慕斯蛋糕" class="product-image">
+                    <div class="product-info">
+                        <div class="product-category">慕斯蛋糕</div>
+                        <h3 class="product-name">巧克力慕斯蛋糕</h3>
+                        <p class="product-description">浓郁巧克力慕斯，搭配新鲜浆果，口感丝滑，巧克力爱好者的首选</p>
+                        <div class="product-price">¥68.00</div>
+                        <div class="product-actions">
+                            <a href="#" class="btn-add-cart">加入购物车</a>
+                            <a href="#" class="btn-view-detail">查看详情</a>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="product-card">
+                    <img src="images/mousse2.jpg" alt="草莓慕斯蛋糕" class="product-image">
+                    <div class="product-info">
+                        <div class="product-category">慕斯蛋糕</div>
+                        <h3 class="product-name">草莓慕斯蛋糕</h3>
+                        <p class="product-description">粉色甜美造型，新鲜草莓装饰，口感轻盈，适合闺蜜聚会</p>
+                        <div class="product-price">¥58.00</div>
+                        <div class="product-actions">
+                            <a href="#" class="btn-add-cart">加入购物车</a>
+                            <a href="#" class="btn-view-detail">查看详情</a>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="product-card">
+                    <img src="images/mousse3.jpg" alt="抹茶慕斯蛋糕" class="product-image">
+                    <div class="product-info">
+                        <div class="product-category">慕斯蛋糕</div>
+                        <h3 class="product-name">抹茶慕斯蛋糕</h3>
+                        <p class="product-description">日式风格，绿色层次分明，抹茶与红豆的完美搭配</p>
+                        <div class="product-price">¥62.00</div>
+                        <div class="product-actions">
+                            <a href="#" class="btn-add-cart">加入购物车</a>
+                            <a href="#" class="btn-view-detail">查看详情</a>
+                        </div>
+                    </div>
+                </div>
+                    <%
+                    }
+                    %>
+            </div>
+        </section>
     </main>
 
     <footer>
-        <p>&copy; 2024 传智店. 保留所有权利.</p>
+        <p>&copy; 2025 环创店. 保留所有权利.</p>
     </footer>
 </body>
 </html>

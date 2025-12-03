@@ -3,6 +3,7 @@ package com.sgu.cakeshopserive.servlet;
 import com.sgu.cakeshopserive.dao.GoodsDao;
 import com.sgu.cakeshopserive.model.Goods;
 import com.sgu.cakeshopserive.common.Result;
+import com.sgu.cakeshopserive.common.Constants;
 
 import javax.servlet.ServletException;
 import javax.servlet.annotation.WebServlet;
@@ -64,6 +65,13 @@ public class CartServlet extends HttpServlet {
     private void addToCart(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
 
+        // 检查用户是否登录
+        HttpSession session = request.getSession();
+        if (!isUserLoggedIn(session)) {
+            sendJsonResponse(response, Result.error("请先登录后再添加商品到购物车", "NOT_LOGGED_IN"));
+            return;
+        }
+
         int goodsId;
         try {
             goodsId = Integer.parseInt(request.getParameter("goodsId"));
@@ -77,8 +85,6 @@ public class CartServlet extends HttpServlet {
             sendJsonResponse(response, Result.error("商品不存在"));
             return;
         }
-
-        HttpSession session = request.getSession();
         @SuppressWarnings("unchecked")
         Map<Integer, Integer> cart = (Map<Integer, Integer>) session.getAttribute("cart");
 
@@ -116,6 +122,13 @@ public class CartServlet extends HttpServlet {
     private void removeFromCart(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
 
+        // 检查用户是否登录
+        HttpSession session = request.getSession();
+        if (!isUserLoggedIn(session)) {
+            sendJsonResponse(response, Result.error("请先登录后再进行购物车操作", "NOT_LOGGED_IN"));
+            return;
+        }
+
         int goodsId;
         try {
             goodsId = Integer.parseInt(request.getParameter("goodsId"));
@@ -123,8 +136,6 @@ public class CartServlet extends HttpServlet {
             sendJsonResponse(response, Result.error("商品ID格式错误"));
             return;
         }
-
-        HttpSession session = request.getSession();
         @SuppressWarnings("unchecked")
         Map<Integer, Integer> cart = (Map<Integer, Integer>) session.getAttribute("cart");
 
@@ -140,6 +151,13 @@ public class CartServlet extends HttpServlet {
 
     private void updateCart(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
+
+        // 检查用户是否登录
+        HttpSession session = request.getSession();
+        if (!isUserLoggedIn(session)) {
+            sendJsonResponse(response, Result.error("请先登录后再进行购物车操作", "NOT_LOGGED_IN"));
+            return;
+        }
 
         int goodsId;
         int quantity;
@@ -162,8 +180,6 @@ public class CartServlet extends HttpServlet {
             sendJsonResponse(response, Result.error("商品不存在"));
             return;
         }
-
-        HttpSession session = request.getSession();
         @SuppressWarnings("unchecked")
         Map<Integer, Integer> cart = (Map<Integer, Integer>) session.getAttribute("cart");
 
@@ -185,7 +201,12 @@ public class CartServlet extends HttpServlet {
     private void clearCart(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
 
+        // 检查用户是否登录
         HttpSession session = request.getSession();
+        if (!isUserLoggedIn(session)) {
+            sendJsonResponse(response, Result.error("请先登录后再进行购物车操作", "NOT_LOGGED_IN"));
+            return;
+        }
         session.removeAttribute("cart");
         session.setAttribute("cartCount", 0);
 
@@ -195,7 +216,13 @@ public class CartServlet extends HttpServlet {
     private void viewCart(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
 
+        // 检查用户是否登录
         HttpSession session = request.getSession();
+        if (!isUserLoggedIn(session)) {
+            request.setAttribute("error", "请先登录后查看购物车");
+            request.getRequestDispatcher("/login.jsp").forward(request, response);
+            return;
+        }
         @SuppressWarnings("unchecked")
         Map<Integer, Integer> cart = (Map<Integer, Integer>) session.getAttribute("cart");
 
@@ -299,6 +326,15 @@ public class CartServlet extends HttpServlet {
         }
 
         sendJsonResponse(response, Result.success(count));
+    }
+
+    /**
+     * 检查用户是否已登录
+     */
+    private boolean isUserLoggedIn(HttpSession session) {
+        return session.getAttribute(Constants.SESSION_IS_LOGGED_IN) != null
+            && (Boolean) session.getAttribute(Constants.SESSION_IS_LOGGED_IN)
+            && session.getAttribute(Constants.SESSION_USER_ID) != null;
     }
 
     /**

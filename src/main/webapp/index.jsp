@@ -37,7 +37,12 @@
                                 showNotification(response.message, 'success');
                                 updateCartCount(); // 更新购物车数量
                             } else {
-                                showNotification(response.message, 'error');
+                                // 检查是否为未登录错误
+                                if (response.code === 'NOT_LOGGED_IN') {
+                                    showLoginPrompt(response.message);
+                                } else {
+                                    showNotification(response.message, 'error');
+                                }
                             }
                         } catch (e) {
                             // 如果不是JSON响应，可能是页面跳转
@@ -174,6 +179,125 @@
                     }
                 }, 300);
             }, type === 'info' ? 2000 : 3000); // info类型显示时间更短
+        }
+
+        // 显示登录提示弹窗
+        function showLoginPrompt(message) {
+            // 创建遮罩层
+            const overlay = document.createElement('div');
+            overlay.style.cssText = `
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background-color: rgba(0, 0, 0, 0.5);
+                z-index: 9999;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                animation: fadeIn 0.3s ease;
+            `;
+
+            // 创建弹窗容器
+            const modal = document.createElement('div');
+            modal.style.cssText = `
+                background: white;
+                border-radius: 12px;
+                padding: 30px;
+                max-width: 400px;
+                width: 90%;
+                box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+                text-align: center;
+                animation: slideIn 0.3s ease;
+                position: relative;
+            `;
+
+            modal.innerHTML = `
+                <div style="font-size: 48px; color: #FF9800; margin-bottom: 20px;">🔒</div>
+                <h3 style="color: #5D4037; margin-bottom: 15px; font-size: 20px;">需要登录</h3>
+                <p style="color: #666; line-height: 1.5; margin-bottom: 25px;">${message}</p>
+                <div style="display: flex; gap: 15px; justify-content: center;">
+                    <button id="gotoLogin" style="background: #FF9800; color: white; border: none; padding: 12px 25px; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: bold; transition: background 0.3s;">
+                        去登录
+                    </button>
+                    <button id="cancelLogin" style="background: #f5f5f5; color: #666; border: none; padding: 12px 25px; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: bold; transition: background 0.3s;">
+                        取消
+                    </button>
+                </div>
+            `;
+
+            overlay.appendChild(modal);
+            document.body.appendChild(overlay);
+
+            // 添加CSS动画
+            if (!document.getElementById('modal-styles')) {
+                const style = document.createElement('style');
+                style.id = 'modal-styles';
+                style.textContent = `
+                    @keyframes fadeIn {
+                        from { opacity: 0; }
+                        to { opacity: 1; }
+                    }
+                    @keyframes slideIn {
+                        from { transform: translateY(-50px); opacity: 0; }
+                        to { transform: translateY(0); opacity: 1; }
+                    }
+                `;
+                document.head.appendChild(style);
+            }
+
+            // 绑定事件
+            document.getElementById('gotoLogin').addEventListener('click', function() {
+                window.location.href = 'login.jsp';
+            });
+
+            document.getElementById('cancelLogin').addEventListener('click', function() {
+                closeLoginPrompt();
+            });
+
+            // 点击遮罩层关闭弹窗
+            overlay.addEventListener('click', function(e) {
+                if (e.target === overlay) {
+                    closeLoginPrompt();
+                }
+            });
+
+            // ESC键关闭弹窗
+            document.addEventListener('keydown', function(e) {
+                if (e.key === 'Escape') {
+                    closeLoginPrompt();
+                }
+            });
+
+            // 保存弹窗引用以便关闭
+            window.currentLoginPrompt = overlay;
+        }
+
+        // 关闭登录提示弹窗
+        function closeLoginPrompt() {
+            if (window.currentLoginPrompt) {
+                window.currentLoginPrompt.style.animation = 'fadeOut 0.3s ease';
+                setTimeout(() => {
+                    if (window.currentLoginPrompt && window.currentLoginPrompt.parentNode) {
+                        window.currentLoginPrompt.parentNode.removeChild(window.currentLoginPrompt);
+                        window.currentLoginPrompt = null;
+                    }
+                }, 300);
+            }
+
+            // 添加淡出动画
+            if (!document.getElementById('modal-fade-out-styles')) {
+                const style = document.createElement('style');
+                style.id = 'modal-fade-out-styles';
+                style.textContent = `
+                    @keyframes fadeOut {
+                        from { opacity: 1; }
+                        to { opacity: 0; }
+                    }
+                `;
+                document.head.appendChild(style);
+            }
         }
 
         // 页面加载时更新购物车数量

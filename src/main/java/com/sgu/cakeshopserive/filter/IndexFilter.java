@@ -91,6 +91,16 @@ public class IndexFilter implements Filter {
                 httpRequest.setAttribute("newGoods", newGoods);
                 httpRequest.setAttribute("bannerGoods", bannerGoods);
 
+                // 计算购物车数量
+                javax.servlet.http.HttpSession session = httpRequest.getSession();
+                @SuppressWarnings("unchecked")
+                java.util.Map<Integer, Integer> cart = (java.util.Map<Integer, Integer>) session.getAttribute("cart");
+                int cartCount = 0;
+                if (cart != null) {
+                    cartCount = cart.values().stream().mapToInt(Integer::intValue).sum();
+                }
+                httpRequest.setAttribute("cartCount", cartCount);
+
             } catch (Exception e) {
                 // 记录错误但不阻止页面访问
                 System.err.println("IndexFilter加载商品数据失败: " + e.getMessage());
@@ -103,6 +113,16 @@ public class IndexFilter implements Filter {
                 httpRequest.setAttribute("hotGoods", new ArrayList<Goods>());
                 httpRequest.setAttribute("newGoods", new ArrayList<Goods>());
                 httpRequest.setAttribute("bannerGoods", new ArrayList<Goods>());
+
+                // 即使发生异常也要计算购物车数量
+                javax.servlet.http.HttpSession session = httpRequest.getSession();
+                @SuppressWarnings("unchecked")
+                java.util.Map<Integer, Integer> cart = (java.util.Map<Integer, Integer>) session.getAttribute("cart");
+                int cartCount = 0;
+                if (cart != null) {
+                    cartCount = cart.values().stream().mapToInt(Integer::intValue).sum();
+                }
+                httpRequest.setAttribute("cartCount", cartCount);
             }
         }
 

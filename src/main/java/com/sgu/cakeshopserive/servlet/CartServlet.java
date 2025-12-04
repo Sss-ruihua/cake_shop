@@ -102,6 +102,9 @@ public class CartServlet extends HttpServlet {
 
         // 添加到购物车
         cart.put(goodsId, cart.getOrDefault(goodsId, 0) + 1);
+
+        // 计算当前购物车总数量
+        int totalCount = cart.values().stream().mapToInt(Integer::intValue).sum();
         updateCartCount(session, cart);
 
         // 检查是否为AJAX请求
@@ -109,9 +112,12 @@ public class CartServlet extends HttpServlet {
 
         String referer = request.getHeader("Referer");
         if (isAjax || (referer != null && (referer.contains("cart") || referer.contains("detail") || referer.contains("goods")))) {
-            // 如果是AJAX请求或者是从相关页面来的，返回JSON响应
+            // 如果是AJAX请求或者是从相关页面来的，返回JSON响应，包含购物车数量
             response.setContentType("application/json;charset=UTF-8");
-            sendJsonResponse(response, Result.success("商品已添加到购物车"));
+
+            // 创建包含购物车数量的数据对象
+            CartAddResponse responseData = new CartAddResponse("商品已添加到购物车", totalCount);
+            sendJsonResponse(response, Result.success(responseData));
         } else {
             // 如果是从首页来的普通请求，使用页面跳转
             request.setAttribute("successMessage", "商品已添加到购物车");
@@ -316,6 +322,8 @@ public class CartServlet extends HttpServlet {
     private void getCartCount(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
 
+        response.setContentType("application/json;charset=UTF-8");
+
         HttpSession session = request.getSession();
         @SuppressWarnings("unchecked")
         Map<Integer, Integer> cart = (Map<Integer, Integer>) session.getAttribute("cart");
@@ -346,6 +354,35 @@ public class CartServlet extends HttpServlet {
 
         try (PrintWriter out = response.getWriter()) {
             out.print(result.toJson());
+        }
+    }
+
+    /**
+     * 购物车添加响应数据类
+     */
+    public static class CartAddResponse {
+        private String message;
+        private int cartCount;
+
+        public CartAddResponse(String message, int cartCount) {
+            this.message = message;
+            this.cartCount = cartCount;
+        }
+
+        public String getMessage() {
+            return message;
+        }
+
+        public void setMessage(String message) {
+            this.message = message;
+        }
+
+        public int getCartCount() {
+            return cartCount;
+        }
+
+        public void setCartCount(int cartCount) {
+            this.cartCount = cartCount;
         }
     }
 }

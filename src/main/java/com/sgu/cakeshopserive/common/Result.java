@@ -91,8 +91,13 @@ public class Result<T> {
 
         if (data instanceof String) {
             json.append(",\"data\":\"").append(escapeJson((String) data)).append("\"");
+        } else if (data instanceof java.util.List) {
+            // 处理List类型的序列化
+            json.append(",\"data\":");
+            json.append(listToJson((java.util.List<?>) data));
         } else if (data != null) {
-            json.append(",\"data\":").append(escapeJson(data.toString()));
+            json.append(",\"data\":");
+            json.append(objectToJson(data));
         } else {
             json.append(",\"data\":null");
         }
@@ -100,6 +105,128 @@ public class Result<T> {
         json.append(",\"code\":\"").append(escapeJson(code)).append("\"");
         json.append("}");
         return json.toString();
+    }
+
+    /**
+     * List转JSON
+     */
+    private String listToJson(java.util.List<?> list) {
+        StringBuilder json = new StringBuilder();
+        json.append("[");
+
+        for (int i = 0; i < list.size(); i++) {
+            if (i > 0) json.append(",");
+            json.append(objectToJson(list.get(i)));
+        }
+
+        json.append("]");
+        return json.toString();
+    }
+
+    /**
+     * 对象转JSON
+     */
+    private String objectToJson(Object obj) {
+        try {
+            // 检查是否是Type对象，进行特殊处理
+            if (obj.getClass().getName().contains("Type")) {
+                return typeToJson(obj);
+            }
+
+            // 尝试通过反射获取对象属性
+            StringBuilder json = new StringBuilder();
+            json.append("{");
+
+            java.lang.reflect.Field[] fields = obj.getClass().getDeclaredFields();
+            boolean first = true;
+
+            for (java.lang.reflect.Field field : fields) {
+                field.setAccessible(true);
+                Object value = field.get(obj);
+
+                if (!first) {
+                    json.append(",");
+                }
+                first = false;
+
+                json.append("\"").append(field.getName()).append("\":");
+
+                if (value == null) {
+                    json.append("null");
+                } else if (value instanceof String) {
+                    json.append("\"").append(escapeJson((String) value)).append("\"");
+                } else if (value instanceof Number || value instanceof Boolean) {
+                    json.append(value);
+                } else if (value instanceof java.sql.Timestamp || value instanceof java.sql.Date || value instanceof java.util.Date) {
+                    // 处理日期时间类型
+                    json.append("\"").append(value.toString()).append("\"");
+                } else {
+                    // 对于其他对象类型，转换为字符串
+                    json.append("\"").append(escapeJson(value.toString())).append("\"");
+                }
+            }
+
+            json.append("}");
+            return json.toString();
+        } catch (Exception e) {
+            // 如果反射失败，使用toString
+            return "\"" + escapeJson(obj.toString()) + "\"";
+        }
+    }
+
+    /**
+     * Type对象转JSON（专门处理）
+     */
+    private String typeToJson(Object typeObj) {
+        try {
+            StringBuilder json = new StringBuilder();
+            json.append("{");
+
+            // 手动处理Type对象的已知字段
+            try {
+                java.lang.reflect.Field typeIdField = typeObj.getClass().getDeclaredField("typeId");
+                java.lang.reflect.Field typeNameField = typeObj.getClass().getDeclaredField("typeName");
+
+                typeIdField.setAccessible(true);
+                typeNameField.setAccessible(true);
+
+                int typeId = typeIdField.getInt(typeObj);
+                String typeName = (String) typeNameField.get(typeObj);
+
+                json.append("\"typeId\":").append(typeId);
+                json.append(",\"typeName\":\"").append(escapeJson(typeName)).append("\"");
+
+            } catch (NoSuchFieldException e) {
+                // 如果字段不存在，使用反射通用方法
+                java.lang.reflect.Field[] fields = typeObj.getClass().getDeclaredFields();
+                boolean first = true;
+                for (java.lang.reflect.Field field : fields) {
+                    field.setAccessible(true);
+                    Object value = field.get(typeObj);
+
+                    if (!first) {
+                        json.append(",");
+                    }
+                    first = false;
+
+                    json.append("\"").append(field.getName()).append("\":");
+
+                    if (value == null) {
+                        json.append("null");
+                    } else if (value instanceof String) {
+                        json.append("\"").append(escapeJson((String) value)).append("\"");
+                    } else {
+                        json.append(value);
+                    }
+                }
+            }
+
+            json.append("}");
+            return json.toString();
+        } catch (Exception e) {
+            // 如果所有方法都失败，返回简单的JSON
+            return "{\"typeId\":0,\"typeName\":\"未知分类\"}";
+        }
     }
 
     /**

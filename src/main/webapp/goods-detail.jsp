@@ -162,6 +162,26 @@
                 flex-direction: column;
             }
         }
+          /* 购物车角标样式 */
+        .cart-icon {
+            position: relative;
+        }
+
+        .cart-count {
+            position: absolute;
+            top: -8px;
+            right: -8px;
+            background-color: #FF9800;
+            color: white;
+            border-radius: 50%;
+            width: 16px;
+            height: 16px;
+            font-size: 10px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            line-height: 1;
+        }
     </style>
     <script>
         // AJAX添加商品到购物车
@@ -191,7 +211,21 @@
                             const response = JSON.parse(xhr.responseText);
                             if (response.success) {
                                 showNotification(response.message, 'success');
-                                updateCartCount(); // 更新购物车数量
+
+                                // 如果响应中包含购物车数量，直接更新，否则调用updateCartCount
+                                if (response.data && typeof response.data.cartCount === 'number') {
+                                    const cartCountElement = document.getElementById('cartCount');
+                                    if (cartCountElement) {
+                                        cartCountElement.textContent = response.data.cartCount;
+                                        // 添加动画效果
+                                        cartCountElement.style.transform = 'scale(1.3)';
+                                        setTimeout(() => {
+                                            cartCountElement.style.transform = 'scale(1)';
+                                        }, 300);
+                                    }
+                                } else {
+                                    updateCartCount(); // 更新购物车数量
+                                }
                             } else {
                                 showNotification(response.message, 'error');
                             }
@@ -219,9 +253,12 @@
                     try {
                         const response = JSON.parse(xhr.responseText);
                         if (response.success) {
-                            const cartCountElement = document.querySelector('.cart-count');
+                            const cartCountElement = document.getElementById('cartCount');
                             if (cartCountElement) {
-                                cartCountElement.textContent = response.data || 0;
+                                // 确保response.data是数字
+                                const count = typeof response.data === 'number' ? response.data :
+                                              (response.data && !isNaN(response.data) ? parseInt(response.data) : 0);
+                                cartCountElement.textContent = count;
                                 // 添加动画效果
                                 cartCountElement.style.transform = 'scale(1.3)';
                                 setTimeout(() => {
@@ -231,6 +268,11 @@
                         }
                     } catch (e) {
                         console.error('Failed to parse cart count response:', e);
+                        // 设置默认值
+                        const cartCountElement = document.getElementById('cartCount');
+                        if (cartCountElement) {
+                            cartCountElement.textContent = '0';
+                        }
                     }
                 }
             };
@@ -353,7 +395,7 @@
                 <a href="#" class="search-icon">🔍</a>
                 <a href="cart" class="cart-icon">
                     🛒
-                    <span class="cart-count">0</span>
+                    <span class="cart-count" id="cartCount">${cartCount != null ? cartCount : 0}</span>
                 </a>
             </div>
         </div>

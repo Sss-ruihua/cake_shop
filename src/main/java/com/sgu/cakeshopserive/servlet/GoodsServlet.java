@@ -10,8 +10,10 @@ import javax.servlet.annotation.WebServlet;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import javax.servlet.http.HttpSession;
 import java.io.IOException;
 import java.util.List;
+import java.util.Map;
 
 /**
  * 商品控制器
@@ -95,6 +97,17 @@ public class GoodsServlet extends HttpServlet {
 
             if (result.isSuccess()) {
                 request.setAttribute("goods", result.getData());
+
+                // 计算购物车数量
+                HttpSession session = request.getSession();
+                @SuppressWarnings("unchecked")
+                Map<Integer, Integer> cart = (Map<Integer, Integer>) session.getAttribute("cart");
+                int cartCount = 0;
+                if (cart != null) {
+                    cartCount = cart.values().stream().mapToInt(Integer::intValue).sum();
+                }
+                request.setAttribute("cartCount", cartCount);
+
                 request.getRequestDispatcher("/goods-detail.jsp").forward(request, response);
             } else {
                 request.setAttribute("error", result.getMessage());
@@ -167,6 +180,16 @@ public class GoodsServlet extends HttpServlet {
                 request.setAttribute("goodsList", result.getData());
                 request.setAttribute("currentType", currentType);
                 request.setAttribute("types", types);
+
+                // 计算购物车数量
+                HttpSession session = request.getSession();
+                @SuppressWarnings("unchecked")
+                Map<Integer, Integer> cart = (Map<Integer, Integer>) session.getAttribute("cart");
+                int cartCount = 0;
+                if (cart != null) {
+                    cartCount = cart.values().stream().mapToInt(Integer::intValue).sum();
+                }
+                request.setAttribute("cartCount", cartCount);
 
                 request.getRequestDispatcher("/category.jsp").forward(request, response);
             } else {

@@ -1,9 +1,10 @@
 <%@ page contentType="text/html; charset=UTF-8" pageEncoding="UTF-8" %>
 <%@ page import="java.util.*, com.sgu.cakeshopserive.model.Goods" %>
+<%@ page import="com.sgu.cakeshopserive.model.Type" %>
 <!DOCTYPE html>
 <html>
 <head>
-    <title>环创店 - 首页</title>
+    <title>环创店 - 商品分类</title>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="css/main.css">
@@ -13,93 +14,6 @@
                 window.location.href = 'goods?action=detail&goodsId=' + goodsId;
             }
         }
-
-        function showDemoMessage(goodsName) {
-            alert('您点击的是示例商品：' + goodsName + '\n\n实际使用时，这里会跳转到真实的商品详情页面。');
-        }
-
-        // 加载分类数据
-        function loadCategories() {
-            const xhr = new XMLHttpRequest();
-            xhr.open('GET', 'type?action=ajax', true);
-            xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
-
-            xhr.onreadystatechange = function() {
-                if (xhr.readyState === 4) {
-                    const categoryDropdown = document.getElementById('categoryDropdown');
-
-                    if (xhr.status === 200) {
-                        try {
-                            const response = JSON.parse(xhr.responseText);
-                            console.log('Categories response:', response); // 调试信息
-
-                            if (response.success && response.data) {
-                                renderCategories(response.data);
-                            } else {
-                                console.error('Categories API returned error:', response.message);
-                                if (categoryDropdown) {
-                                    categoryDropdown.innerHTML = '<a href="#">加载失败</a>';
-                                }
-                            }
-                        } catch (e) {
-                            console.error('Failed to parse categories response:', e);
-                            console.error('Raw response:', xhr.responseText);
-                            if (categoryDropdown) {
-                                categoryDropdown.innerHTML = '<a href="#">解析失败</a>';
-                            }
-                        }
-                    } else {
-                        console.error('Failed to load categories. Status:', xhr.status);
-                        console.error('Response:', xhr.responseText);
-                        if (categoryDropdown) {
-                            categoryDropdown.innerHTML = '<a href="#">请求失败</a>';
-                        }
-                    }
-                }
-            };
-
-            xhr.send();
-        }
-
-        // 渲染分类菜单
-        function renderCategories(categories) {
-            const categoryDropdown = document.getElementById('categoryDropdown');
-            if (!categoryDropdown) {
-                console.error('Category dropdown element not found');
-                return;
-            }
-
-            if (!categories || categories.length === 0) {
-                categoryDropdown.innerHTML = '<a href="#">暂无分类</a>';
-                console.warn('No categories data available');
-                return;
-            }
-
-            let html = '';
-            categories.forEach(category => {
-                console.log('Processing category:', category); // 调试信息
-                if (category.typeId && category.typeName) {
-                    var typeIdStr1 = "<a href=\"goods?action=type&typeId="+category.typeId+"\">"
-                    var typeName = category.typeName;
-                    html += typeIdStr1 + typeName + "</a>";
-                } else {
-                    console.warn('Invalid category data:', category);
-                }
-            });
-
-            if (html === '') {
-                html = '<a href="#">无有效分类</a>';
-            }
-
-            categoryDropdown.innerHTML = html;
-            console.log('Categories rendered successfully');
-        }
-
-        // 页面加载时初始化
-        document.addEventListener('DOMContentLoaded', function() {
-            updateCartCount();
-            loadCategories(); // 加载分类数据
-        });
 
         // AJAX添加商品到购物车
         function addToCart(goodsId) {
@@ -189,6 +103,48 @@
                 }
             };
             xhr.send();
+        }
+
+        // 加载分类数据
+        function loadCategories() {
+            const xhr = new XMLHttpRequest();
+            xhr.open('GET', 'type?action=ajax', true);
+            xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
+
+            xhr.onreadystatechange = function() {
+                if (xhr.readyState === 4) {
+                    if (xhr.status === 200) {
+                        try {
+                            const response = JSON.parse(xhr.responseText);
+                            if (response.success && response.data) {
+                                renderCategories(response.data);
+                            }
+                        } catch (e) {
+                            console.error('Failed to parse categories response:', e);
+                        }
+                    } else {
+                        console.error('Failed to load categories:', xhr.status);
+                    }
+                }
+            };
+
+            xhr.send();
+        }
+
+        // 渲染分类菜单
+        function renderCategories(categories) {
+            const categoryDropdown = document.getElementById('categoryDropdown');
+            if (!categoryDropdown || !categories || categories.length === 0) {
+                return;
+            }
+
+            let html = '';
+            categories.forEach(category => {
+                const isActive = (currentTypeId && currentTypeId == category.typeId) ? 'active' : '';
+                html += `<a href="goods?action=type&typeId=${category.typeId}" class="${isActive}">${category.typeName}</a>`;
+            });
+
+            categoryDropdown.innerHTML = html;
         }
 
         // 显示通知消息
@@ -283,7 +239,7 @@
                         notification.parentNode.removeChild(notification);
                     }
                 }, 300);
-            }, type === 'info' ? 2000 : 3000); // info类型显示时间更短
+            }, type === 'info' ? 2000 : 3000);
         }
 
         // 显示登录提示弹窗
@@ -405,7 +361,15 @@
             }
         }
 
-      </script>
+        // 页面加载时初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            updateCartCount();
+            loadCategories(); // 加载分类数据
+        });
+
+        // 当前分类ID（从JSP变量传递）
+        const currentTypeId = <%= request.getParameter("typeId") != null ? request.getParameter("typeId") : "null" %>;
+    </script>
     <style>
         * {
             margin: 0;
@@ -515,27 +479,17 @@
             transform: translateX(5px);
         }
 
+        .category-dropdown a.active {
+            background-color: #FFF3E0;
+            color: #FF9800;
+        }
+
         .category-dropdown a:first-child {
             border-radius: 8px 8px 0 0;
         }
 
         .category-dropdown a:last-child {
             border-radius: 0 0 8px 8px;
-        }
-
-        /* 加载动画 */
-        .loading-spinner {
-            display: inline-block;
-            width: 14px;
-            height: 14px;
-            border: 2px solid #ffffff;
-            border-radius: 50%;
-            border-top-color: transparent;
-            animation: spin 1s ease-in-out infinite;
-        }
-
-        @keyframes spin {
-            to { transform: rotate(360deg); }
         }
 
         .nav-actions {
@@ -578,80 +532,50 @@
         /* 主内容区 */
         .main-container {
             max-width: 1200px;
-            margin: 50px auto;
+            margin: 30px auto;
             padding: 0 20px;
         }
 
-        .welcome-section {
-            text-align: center;
-            background-color: white;
-            padding: 60px 40px;
-            border-radius: 10px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-            margin-bottom: 40px;
-        }
-
-        .welcome-title {
-            color: #5D4037;
-            font-size: 36px;
-            margin-bottom: 20px;
-            font-weight: bold;
-        }
-
-        .welcome-subtitle {
-            color: #666;
-            font-size: 18px;
-            margin-bottom: 0;
-        }
-
-        .features-section {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 30px;
-            margin-top: 40px;
-        }
-
-        .feature-card {
+        .category-header {
             background-color: white;
             padding: 30px;
             border-radius: 10px;
             box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 30px;
             text-align: center;
-            transition: transform 0.3s;
         }
 
-        .feature-card:hover {
-            transform: translateY(-5px);
-        }
-
-        .feature-icon {
-            font-size: 48px;
-            margin-bottom: 20px;
-            color: #FF9800;
-        }
-
-        .feature-title {
+        .category-title {
             color: #5D4037;
-            font-size: 20px;
+            font-size: 32px;
             margin-bottom: 15px;
             font-weight: bold;
         }
 
-        .feature-description {
+        .breadcrumb {
             color: #666;
-            line-height: 1.6;
+            font-size: 14px;
+        }
+
+        .breadcrumb a {
+            color: #FF9800;
+            text-decoration: none;
+        }
+
+        .breadcrumb a:hover {
+            text-decoration: underline;
         }
 
         /* 商品展示区域 */
         .products-section {
-            margin-top: 40px;
+            margin-top: 20px;
         }
 
         .section-title {
             text-align: center;
             color: #5D4037;
-            font-size: 32px;
-            margin-bottom: 40px;
+            font-size: 28px;
+            margin-bottom: 30px;
             font-weight: bold;
         }
 
@@ -756,6 +680,24 @@
             background-color: #4E342E;
         }
 
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #666;
+        }
+
+        .empty-state-icon {
+            font-size: 64px;
+            color: #ccc;
+            margin-bottom: 20px;
+        }
+
+        .empty-state-title {
+            font-size: 24px;
+            margin-bottom: 10px;
+            color: #5D4037;
+        }
+
         footer {
             background-color: #5D4037;
             color: white;
@@ -772,7 +714,7 @@
             <a href="index.jsp" class="logo">环创店</a>
             <nav>
                 <ul class="nav-menu">
-                    <li><a href="index.jsp" class="active">首页</a></li>
+                    <li><a href="index.jsp">首页</a></li>
                     <li>
                         <a href="#">商品分类 <span class="category-arrow">▼</span></a>
                         <div class="category-dropdown" id="categoryDropdown">
@@ -809,49 +751,45 @@
 
     <!-- 主内容区 -->
     <main class="main-container">
-        <section class="welcome-section">
-            <h1 class="welcome-title">欢迎来到环创店</h1>
-            <p class="welcome-subtitle">发现美味蛋糕，享受甜蜜生活</p>
-        </section>
-
-        <section class="features-section">
-            <div class="feature-card">
-                <div class="feature-icon">🎂</div>
-                <h3 class="feature-title">精美蛋糕</h3>
-                <p class="feature-description">手工制作的新鲜蛋糕，多种口味选择，满足您的味蕾需求</p>
+        <div class="category-header">
+            <h1 class="category-title">
+                <%
+                    Type currentType = (Type) request.getAttribute("currentType");
+                    if (currentType != null) {
+                        out.print(currentType.getTypeName());
+                    } else {
+                        out.print("商品分类");
+                    }
+                %>
+            </h1>
+            <div class="breadcrumb">
+                <a href="index.jsp">首页</a> >
+                <span>
+                    <%
+                        if (currentType != null) {
+                            out.print(currentType.getTypeName());
+                        } else {
+                            out.print("全部分类");
+                        }
+                    %>
+                </span>
             </div>
-
-            <div class="feature-card">
-                <div class="feature-icon">🚚</div>
-                <h3 class="feature-title">快速配送</h3>
-                <p class="feature-description">同城快速配送，保证蛋糕新鲜送达，准时送达您的手中</p>
-            </div>
-
-            <div class="feature-card">
-                <div class="feature-icon">💯</div>
-                <h3 class="feature-title">品质保证</h3>
-                <p class="feature-description">选用优质原料，严格品控，为您带来最佳的味觉体验</p>
-            </div>
-        </section>
+        </div>
 
         <!-- 商品展示区域 -->
         <section class="products-section">
-            <h2 class="section-title">精选商品</h2>
             <div class="products-grid">
                 <%
-                    // 从request中获取动态加载的商品数据
                     List<Goods> goodsList = (List<Goods>) request.getAttribute("goodsList");
-                    Map<Integer, String> typeMap = (Map<Integer, String>) request.getAttribute("typeMap");
 
                     if (goodsList != null && !goodsList.isEmpty()) {
                         for (Goods goods : goodsList) {
-                            String typeName = typeMap != null ? typeMap.get(goods.getTypeId()) : "未分类";
                             String imageUrl = goods.getCoverImage() != null && !goods.getCoverImage().isEmpty() ? goods.getCoverImage() : "images/default.jpg";
                 %>
                 <div class="product-card" onclick="goToDetail(event, '<%= goods.getGoodsId() %>')" style="cursor: pointer;">
                     <img src="<%= imageUrl %>" alt="<%= goods.getGoodsName() %>" class="product-image">
                     <div class="product-info">
-                        <div class="product-category"><%= typeName %></div>
+                        <div class="product-category"><%= goods.getTypeName() != null ? goods.getTypeName() : "未分类" %></div>
                         <h3 class="product-name"><%= goods.getGoodsName() %></h3>
                         <p class="product-description"><%= goods.getDescription() %></p>
                         <div class="product-price">¥<%= String.format("%.2f", goods.getPrice()) %></div>
@@ -864,12 +802,15 @@
                 <%
                         }
                     } else {
-                        // 如果没有动态数据，跳转到错误页面
-                        request.setAttribute("error", "暂无商品数据，请稍后再试或联系管理员");
-                        request.getRequestDispatcher("/error.jsp").forward(request, response);
-                        return;
+                %>
+                <div class="empty-state" style="grid-column: 1 / -1;">
+                    <div class="empty-state-icon">📦</div>
+                    <h3 class="empty-state-title">暂无商品</h3>
+                    <p>该分类下暂时没有商品，请选择其他分类或稍后再试</p>
+                </div>
+                <%
                     }
-                    %>
+                %>
             </div>
         </section>
     </main>

@@ -21,9 +21,9 @@ public class TypeDao {
              ResultSet rs = stmt.executeQuery()) {
 
             while (rs.next()) {
-                Type type = new Type();
-                type.setTypeId(rs.getInt("type_id"));
-                type.setTypeName(rs.getString("type_name"));
+                int typeId = rs.getInt("type_id");
+                String typeName = rs.getString("type_name");
+                Type type = new Type(typeId, typeName);
                 types.add(type);
             }
         } catch (SQLException e) {

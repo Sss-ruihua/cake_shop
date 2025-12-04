@@ -7,6 +7,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="css/main.css">
+    <link rel="stylesheet" href="css/lazy-load.css">
     <script>
         function goToDetail(event, goodsId) {
             if (goodsId && goodsId !== 'null') {
@@ -99,10 +100,38 @@
         document.addEventListener('DOMContentLoaded', function() {
             updateCartCount();
             loadCategories(); // 加载分类数据
+            initLazyLoader(); // 初始化懒加载
         });
 
+        // 初始化懒加载
+        function initLazyLoader() {
+            const goodsContainer = document.getElementById('goods-container');
+            if (goodsContainer) {
+                // 创建懒加载实例
+                window.lazyLoader = initGoodsLazyLoader(goodsContainer, 'list', {});
+
+                // 监听懒加载事件
+                document.addEventListener('lazyload:loaded', function(e) {
+                    console.log('懒加载完成:', e.detail);
+                });
+
+                document.addEventListener('lazyload:error', function(e) {
+                    console.error('懒加载错误:', e.detail);
+                });
+
+                // 加载第一页商品
+                window.lazyLoader.loadMore();
+            }
+        }
+
         // AJAX添加商品到购物车
-        function addToCart(goodsId) {
+        function addToCart(goodsId, goodsName, price, stock) {
+            // 检查库存
+            if (stock <= 0) {
+                showNotification('商品暂时缺货，无法加入购物车', 'error');
+                return;
+            }
+
             const xhr = new XMLHttpRequest();
             xhr.open('POST', 'cart?action=add&goodsId=' + goodsId, true);
             xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
@@ -837,39 +866,43 @@
         <!-- 商品展示区域 -->
         <section class="products-section">
             <h2 class="section-title">精选商品</h2>
-            <div class="products-grid">
-                <%
-                    // 从request中获取动态加载的商品数据
-                    List<Goods> goodsList = (List<Goods>) request.getAttribute("goodsList");
-                    Map<Integer, String> typeMap = (Map<Integer, String>) request.getAttribute("typeMap");
-
-                    if (goodsList != null && !goodsList.isEmpty()) {
-                        for (Goods goods : goodsList) {
-                            String typeName = typeMap != null ? typeMap.get(goods.getTypeId()) : "未分类";
-                            String imageUrl = goods.getCoverImage() != null && !goods.getCoverImage().isEmpty() ? goods.getCoverImage() : "images/default.jpg";
-                %>
-                <div class="product-card" onclick="goToDetail(event, '<%= goods.getGoodsId() %>')" style="cursor: pointer;">
-                    <img src="<%= imageUrl %>" alt="<%= goods.getGoodsName() %>" class="product-image">
-                    <div class="product-info">
-                        <div class="product-category"><%= typeName %></div>
-                        <h3 class="product-name"><%= goods.getGoodsName() %></h3>
-                        <p class="product-description"><%= goods.getDescription() %></p>
-                        <div class="product-price">¥<%= String.format("%.2f", goods.getPrice()) %></div>
-                        <div class="product-actions">
-                            <button class="btn-add-cart" onclick="event.stopPropagation(); addToCart(<%= goods.getGoodsId() %>)">加入购物车</button>
-                            <a href="goods?action=detail&goodsId=<%= goods.getGoodsId() %>" class="btn-view-detail" onclick="event.stopPropagation()">查看详情</a>
+            <div id="goods-container" class="products-grid">
+                <!-- 商品将通过懒加载动态插入这里 -->
+                <div class="skeleton-container">
+                    <!-- 骨架屏，提升用户体验 -->
+                    <div class="skeleton-item">
+                        <div class="skeleton skeleton-image"></div>
+                        <div class="skeleton-content">
+                            <div class="skeleton skeleton-title"></div>
+                            <div class="skeleton skeleton-text"></div>
+                            <div class="skeleton skeleton-text"></div>
+                        </div>
+                    </div>
+                    <div class="skeleton-item">
+                        <div class="skeleton skeleton-image"></div>
+                        <div class="skeleton-content">
+                            <div class="skeleton skeleton-title"></div>
+                            <div class="skeleton skeleton-text"></div>
+                            <div class="skeleton skeleton-text"></div>
+                        </div>
+                    </div>
+                    <div class="skeleton-item">
+                        <div class="skeleton skeleton-image"></div>
+                        <div class="skeleton-content">
+                            <div class="skeleton skeleton-title"></div>
+                            <div class="skeleton skeleton-text"></div>
+                            <div class="skeleton skeleton-text"></div>
+                        </div>
+                    </div>
+                    <div class="skeleton-item">
+                        <div class="skeleton skeleton-image"></div>
+                        <div class="skeleton-content">
+                            <div class="skeleton skeleton-title"></div>
+                            <div class="skeleton skeleton-text"></div>
+                            <div class="skeleton skeleton-text"></div>
                         </div>
                     </div>
                 </div>
-                <%
-                        }
-                    } else {
-                        // 如果没有动态数据，跳转到错误页面
-                        request.setAttribute("error", "暂无商品数据，请稍后再试或联系管理员");
-                        request.getRequestDispatcher("/error.jsp").forward(request, response);
-                        return;
-                    }
-                    %>
             </div>
         </section>
     </main>
@@ -877,5 +910,8 @@
     <footer>
         <p>&copy; 2025 环创店. 保留所有权利.</p>
     </footer>
+
+    <!-- 引入懒加载脚本 -->
+    <script src="js/lazy-load.js"></script>
 </body>
 </html>

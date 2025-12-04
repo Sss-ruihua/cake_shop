@@ -1,9 +1,8 @@
 package com.sgu.cakeshopserive.dao;
 
 import com.sgu.cakeshopserive.model.Goods;
+import com.sgu.cakeshopserive.model.PageResult;
 import com.sgu.cakeshopserive.utils.DBUtils;
-import java.sql.Connection;
-
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -164,6 +163,162 @@ public class GoodsDao {
         }
 
         return false;
+    }
+
+    // ========== 分页查询方法 ==========
+
+    /**
+     * 分页获取所有商品
+     */
+    public PageResult<Goods> getAllGoodsPaginated(int currentPage, int pageSize) {
+        List<Goods> goodsList = new ArrayList<>();
+
+        // 查询当前页数据
+        String dataSql = "SELECT g.*, t.type_name FROM goods g " +
+                        "LEFT JOIN type t ON g.type_id = t.type_id " +
+                        "ORDER BY g.create_time DESC " +
+                        "LIMIT ? OFFSET ?";
+
+        // 查询总记录数
+        String countSql = "SELECT COUNT(*) FROM goods";
+
+        try (Connection conn = DBUtils.getConnection()) {
+            // 查询数据
+            try (PreparedStatement dataStmt = conn.prepareStatement(dataSql)) {
+                dataStmt.setInt(1, pageSize);
+                dataStmt.setInt(2, (currentPage - 1) * pageSize);
+
+                try (ResultSet rs = dataStmt.executeQuery()) {
+                    while (rs.next()) {
+                        Goods goods = extractGoodsFromResultSet(rs);
+                        goodsList.add(goods);
+                    }
+                }
+            }
+
+            // 查询总数
+            int totalCount = 0;
+            try (PreparedStatement countStmt = conn.prepareStatement(countSql);
+                 ResultSet rs = countStmt.executeQuery()) {
+                if (rs.next()) {
+                    totalCount = rs.getInt(1);
+                }
+            }
+
+            return new PageResult<>(goodsList, currentPage, pageSize, totalCount);
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+
+        return new PageResult<>(goodsList, currentPage, pageSize, 0);
+    }
+
+    /**
+     * 分页根据分类获取商品
+     */
+    public PageResult<Goods> getGoodsByTypeIdPaginated(int typeId, int currentPage, int pageSize) {
+        List<Goods> goodsList = new ArrayList<>();
+
+        // 查询当前页数据
+        String dataSql = "SELECT g.*, t.type_name FROM goods g " +
+                        "LEFT JOIN type t ON g.type_id = t.type_id " +
+                        "WHERE g.type_id = ? " +
+                        "ORDER BY g.create_time DESC " +
+                        "LIMIT ? OFFSET ?";
+
+        // 查询总记录数
+        String countSql = "SELECT COUNT(*) FROM goods WHERE type_id = ?";
+
+        try (Connection conn = DBUtils.getConnection()) {
+            // 查询数据
+            try (PreparedStatement dataStmt = conn.prepareStatement(dataSql)) {
+                dataStmt.setInt(1, typeId);
+                dataStmt.setInt(2, pageSize);
+                dataStmt.setInt(3, (currentPage - 1) * pageSize);
+
+                try (ResultSet rs = dataStmt.executeQuery()) {
+                    while (rs.next()) {
+                        Goods goods = extractGoodsFromResultSet(rs);
+                        goodsList.add(goods);
+                    }
+                }
+            }
+
+            // 查询总数
+            int totalCount = 0;
+            try (PreparedStatement countStmt = conn.prepareStatement(countSql)) {
+                countStmt.setInt(1, typeId);
+                try (ResultSet rs = countStmt.executeQuery()) {
+                    if (rs.next()) {
+                        totalCount = rs.getInt(1);
+                    }
+                }
+            }
+
+            return new PageResult<>(goodsList, currentPage, pageSize, totalCount);
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+
+        return new PageResult<>(goodsList, currentPage, pageSize, 0);
+    }
+
+    /**
+     * 分页搜索商品
+     */
+    public PageResult<Goods> searchGoodsPaginated(String keyword, int currentPage, int pageSize) {
+        List<Goods> goodsList = new ArrayList<>();
+
+        // 查询当前页数据
+        String dataSql = "SELECT g.*, t.type_name FROM goods g " +
+                        "LEFT JOIN type t ON g.type_id = t.type_id " +
+                        "WHERE g.goods_name LIKE ? OR g.description LIKE ? " +
+                        "ORDER BY g.create_time DESC " +
+                        "LIMIT ? OFFSET ?";
+
+        // 查询总记录数
+        String countSql = "SELECT COUNT(*) FROM goods g " +
+                         "WHERE g.goods_name LIKE ? OR g.description LIKE ?";
+
+        try (Connection conn = DBUtils.getConnection()) {
+            String searchPattern = "%" + keyword + "%";
+
+            // 查询数据
+            try (PreparedStatement dataStmt = conn.prepareStatement(dataSql)) {
+                dataStmt.setString(1, searchPattern);
+                dataStmt.setString(2, searchPattern);
+                dataStmt.setInt(3, pageSize);
+                dataStmt.setInt(4, (currentPage - 1) * pageSize);
+
+                try (ResultSet rs = dataStmt.executeQuery()) {
+                    while (rs.next()) {
+                        Goods goods = extractGoodsFromResultSet(rs);
+                        goodsList.add(goods);
+                    }
+                }
+            }
+
+            // 查询总数
+            int totalCount = 0;
+            try (PreparedStatement countStmt = conn.prepareStatement(countSql)) {
+                countStmt.setString(1, searchPattern);
+                countStmt.setString(2, searchPattern);
+                try (ResultSet rs = countStmt.executeQuery()) {
+                    if (rs.next()) {
+                        totalCount = rs.getInt(1);
+                    }
+                }
+            }
+
+            return new PageResult<>(goodsList, currentPage, pageSize, totalCount);
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+
+        return new PageResult<>(goodsList, currentPage, pageSize, 0);
     }
 
     private Goods extractGoodsFromResultSet(ResultSet rs) throws SQLException {

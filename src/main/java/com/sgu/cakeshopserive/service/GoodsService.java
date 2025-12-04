@@ -6,6 +6,7 @@ import com.sgu.cakeshopserive.dao.GoodsDao;
 import com.sgu.cakeshopserive.dao.TypeDao;
 import com.sgu.cakeshopserive.model.Goods;
 import com.sgu.cakeshopserive.model.Type;
+import com.sgu.cakeshopserive.model.PageResult;
 
 import java.sql.*;
 import java.util.List;
@@ -133,6 +134,82 @@ public class GoodsService {
         } catch (Exception e) {
             e.printStackTrace();
             return Result.error("获取商品列表失败：" + e.getMessage());
+        }
+    }
+
+    // ========== 分页查询方法 ==========
+
+    /**
+     * 分页获取所有商品（用于懒加载）
+     * @param currentPage 当前页码
+     * @param pageSize 每页大小
+     * @return 分页结果
+     */
+    public Result<PageResult<Goods>> getAllGoodsPaginated(int currentPage, int pageSize) {
+        if (currentPage <= 0) currentPage = 1;
+        if (pageSize <= 0) pageSize = 12; // 默认每页12个商品
+
+        try {
+            PageResult<Goods> pageResult = goodsDao.getAllGoodsPaginated(currentPage, pageSize);
+            return Result.success(pageResult);
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            return Result.error("分页获取商品失败：" + e.getMessage());
+        }
+    }
+
+    /**
+     * 分页根据分类获取商品（用于懒加载）
+     * @param typeId 分类ID
+     * @param currentPage 当前页码
+     * @param pageSize 每页大小
+     * @return 分页结果
+     */
+    public Result<PageResult<Goods>> getGoodsByTypePaginated(int typeId, int currentPage, int pageSize) {
+        if (typeId <= 0) {
+            return Result.error("分类ID无效", Constants.CODE_PARAM_ERROR);
+        }
+        if (currentPage <= 0) currentPage = 1;
+        if (pageSize <= 0) pageSize = 12; // 默认每页12个商品
+
+        try {
+            // 验证分类是否存在
+            Type type = typeDao.getTypeById(typeId);
+            if (type == null) {
+                return Result.error("分类不存在", Constants.CODE_TYPE_NOT_FOUND);
+            }
+
+            PageResult<Goods> pageResult = goodsDao.getGoodsByTypeIdPaginated(typeId, currentPage, pageSize);
+            return Result.success(pageResult);
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            return Result.error("分页获取分类商品失败：" + e.getMessage());
+        }
+    }
+
+    /**
+     * 分页搜索商品（用于懒加载）
+     * @param keyword 搜索关键词
+     * @param currentPage 当前页码
+     * @param pageSize 每页大小
+     * @return 分页结果
+     */
+    public Result<PageResult<Goods>> searchGoodsPaginated(String keyword, int currentPage, int pageSize) {
+        if (keyword == null || keyword.trim().isEmpty()) {
+            return Result.error("搜索关键词不能为空", Constants.CODE_PARAM_ERROR);
+        }
+        if (currentPage <= 0) currentPage = 1;
+        if (pageSize <= 0) pageSize = 12; // 默认每页12个商品
+
+        try {
+            PageResult<Goods> pageResult = goodsDao.searchGoodsPaginated(keyword.trim(), currentPage, pageSize);
+            return Result.success(pageResult);
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            return Result.error("分页搜索商品失败：" + e.getMessage());
         }
     }
 

@@ -135,6 +135,92 @@ public class GoodsDao {
         return goodsList;
     }
 
+    /**
+     * 获取搜索建议
+     * @param keyword 搜索关键词
+     * @return 搜索建议列表
+     */
+    public List<String> getSearchSuggestions(String keyword) {
+        List<String> suggestions = new ArrayList<>();
+
+        // 查询匹配商品名称的建议
+        String nameSql = "SELECT DISTINCT goods_name FROM goods " +
+                        "WHERE goods_name LIKE ? " +
+                        "ORDER BY " +
+                        "CASE " +
+                        "  WHEN goods_name LIKE ? THEN 1 " +
+                        "  WHEN goods_name LIKE ? THEN 2 " +
+                        "  ELSE 3 " +
+                        "END, " +
+                        "LENGTH(goods_name) ASC " +
+                        "LIMIT 5";
+
+        // 查询匹配商品描述的推荐词
+        String descSql = "SELECT DISTINCT " +
+                        "CASE " +
+                        "  WHEN goods_name LIKE ? THEN goods_name " +
+                        "  WHEN description LIKE ? THEN " +
+                        "    CASE " +
+                        "      WHEN LOCATE('蛋糕', description) > 0 AND LOCATE(keyword, description) > 0 THEN CONCAT(SUBSTRING(description, 1, LOCATE('蛋糕', description) + 2), '蛋糕') " +
+                        "      WHEN LOCATE('鲜奶', description) > 0 AND LOCATE(keyword, description) > 0 THEN CONCAT(SUBSTRING(description, 1, LOCATE('鲜奶', description) + 2), '鲜奶') " +
+                        "      WHEN LOCATE('巧克力', description) > 0 AND LOCATE(keyword, description) > 0 THEN CONCAT(SUBSTRING(description, 1, LOCATE('巧克力', description) + 3), '巧克力') " +
+                        "      ELSE LEFT(description, 20) " +
+                        "    END " +
+                        "  ELSE NULL " +
+                        "END as suggestion " +
+                        "FROM goods " +
+                        "WHERE goods_name LIKE ? OR description LIKE ? " +
+                        "ORDER BY " +
+                        "CASE " +
+                        "  WHEN goods_name LIKE ? THEN 1 " +
+                        "  ELSE 2 " +
+                        "END, " +
+                        "LENGTH(description) ASC " +
+                        "LIMIT 8";
+
+        try (Connection conn = DBUtils.getConnection()) {
+            // 搜索商品名称建议
+            try (PreparedStatement stmt = conn.prepareStatement(nameSql)) {
+                String searchPattern = "%" + keyword + "%";
+                String exactPattern = keyword + "%";
+                String containPattern = "%" + keyword;
+
+                stmt.setString(1, searchPattern);
+                stmt.setString(2, exactPattern);
+                stmt.setString(3, containPattern);
+
+                try (ResultSet rs = stmt.executeQuery()) {
+                    while (rs.next()) {
+                        String suggestion = rs.getString("goods_name");
+                        if (suggestion != null && !suggestions.contains(suggestion)) {
+                            suggestions.add(suggestion);
+                        }
+                    }
+                }
+            }
+
+            // 添加一些默认的蛋糕相关建议
+            if (suggestions.size() < 5) {
+                String[] defaultSuggestions = {
+                    "生日蛋糕", "巧克力蛋糕", "水果蛋糕", "芝士蛋糕",
+                    "奶油蛋糕", "慕斯蛋糕", "婚礼蛋糕", "儿童蛋糕"
+                };
+
+                for (String suggestion : defaultSuggestions) {
+                    if (suggestion.contains(keyword) && !suggestions.contains(suggestion)) {
+                        suggestions.add(suggestion);
+                        if (suggestions.size() >= 8) break;
+                    }
+                }
+            }
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+
+        return suggestions;
+    }
+
     public List<Goods> getHotGoods(int limit) {
         return getRecommendedGoods("hot", limit);
     }

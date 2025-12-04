@@ -62,6 +62,9 @@ public class GoodsServlet extends HttpServlet {
                 case "ajaxType":
                     ajaxListGoodsByType(request, response);
                     break;
+                case "ajaxSuggest":
+                    ajaxGetSearchSuggestions(request, response);
+                    break;
                 default:
                     listGoods(request, response);
                     break;
@@ -349,6 +352,52 @@ public class GoodsServlet extends HttpServlet {
             e.printStackTrace();
             String errorResponse = String.format(
                 "{\"success\":false,\"message\":\"获取分类商品失败：%s\"}",
+                e.getMessage().replace("\"", "\\\"")
+            );
+            out.write(errorResponse);
+        }
+    }
+
+    /**
+     * AJAX获取搜索建议
+     */
+    private void ajaxGetSearchSuggestions(HttpServletRequest request, HttpServletResponse response)
+            throws ServletException, IOException {
+
+        response.setContentType("application/json;charset=UTF-8");
+        PrintWriter out = response.getWriter();
+
+        try {
+            String keyword = request.getParameter("keyword");
+            if (keyword == null || keyword.trim().isEmpty()) {
+                String errorResponse = "{\"success\":false,\"message\":\"搜索关键词不能为空\"}";
+                out.write(errorResponse);
+                return;
+            }
+
+            // 获取搜索建议
+            Result<List<String>> result = goodsService.getSearchSuggestions(keyword.trim());
+
+            if (result.isSuccess()) {
+                String jsonResponse = String.format(
+                    "{\"success\":true,\"data\":[%s]}",
+                    result.getData().stream()
+                        .map(suggestion -> "\"" + escapeJson(suggestion) + "\"")
+                        .collect(java.util.stream.Collectors.joining(","))
+                );
+                out.write(jsonResponse);
+            } else {
+                String errorResponse = String.format(
+                    "{\"success\":false,\"message\":\"%s\"}",
+                    result.getMessage().replace("\"", "\\\"")
+                );
+                out.write(errorResponse);
+            }
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            String errorResponse = String.format(
+                "{\"success\":false,\"message\":\"获取搜索建议失败：%s\"}",
                 e.getMessage().replace("\"", "\\\"")
             );
             out.write(errorResponse);

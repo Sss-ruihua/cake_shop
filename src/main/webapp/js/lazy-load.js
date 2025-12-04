@@ -234,26 +234,33 @@ class GoodsLazyLoader {
         div.setAttribute('data-goods-id', goods.goodsId);
         div.style.cursor = 'pointer';
 
-        const stockClass = goods.stock <= 0 ? 'out-of-stock' : '';
-        const stockText = goods.stock <= 0 ? '暂时缺货' : `库存: ${goods.stock}`;
+        const isOutOfStock = goods.stock <= 0;
 
         div.innerHTML = `
-            <div class="goods-image" onclick="goToDetail(event, ${goods.goodsId})">
-                <img src="${goods.coverImage}" alt="${goods.goodsName}" class="product-image" loading="lazy"
-                     onerror="this.src='images/default.jpg'">
-                ${goods.stock <= 0 ? '<div class="out-of-stock-overlay">暂时缺货</div>' : ''}
+            <div class="product-image-container" onclick="goToDetail(event, ${goods.goodsId})">
+                <img src="${goods.coverImage || 'images/default-goods.jpg'}"
+                     alt="${goods.goodsName}"
+                     class="product-image"
+                     loading="lazy"
+                     onerror="this.src='images/default-goods.jpg'">
+                ${goods.typeName ? `<div class="product-category">${goods.typeName}</div>` : ''}
+                ${isOutOfStock ? '<div class="out-of-stock-overlay">暂时缺货</div>' : ''}
             </div>
-            <div class="product-info goods-info">
-                <div class="product-category">${goods.typeName || '未分类'}</div>
-                <h3 class="product-name goods-name" onclick="goToDetail(event, ${goods.goodsId})">${goods.goodsName}</h3>
-                <p class="product-description goods-desc">${goods.description}</p>
-                <div class="product-price goods-price">¥${goods.price}</div>
-                <div class="product-actions goods-actions">
-                    <button class="btn-add-cart btn-cart" onclick="event.stopPropagation(); addToCart(${goods.goodsId}, '${goods.goodsName.replace(/'/g, "\\'")}', ${goods.price}, ${goods.stock})"
-                            ${goods.stock <= 0 ? 'disabled' : ''}>
-                        ${goods.stock <= 0 ? '暂时缺货' : '加入购物车'}
+            <div class="product-info">
+                <h3 class="product-title" onclick="goToDetail(event, ${goods.goodsId})">${goods.goodsName}</h3>
+                <p class="product-description">${goods.description || '暂无描述'}</p>
+                <div class="product-price-section">
+                    <div class="product-price">¥${parseFloat(goods.price || 0).toFixed(2)}</div>
+                </div>
+                <div class="product-actions">
+                    <button class="btn-add-cart"
+                            onclick="event.stopPropagation(); addToCart(${goods.goodsId}, '${goods.goodsName.replace(/'/g, "\\'")}', ${goods.price}, ${goods.stock})"
+                            ${isOutOfStock ? 'disabled' : ''}>
+                        ${isOutOfStock ? '暂时缺货' : '加入购物车'}
                     </button>
-                    <a href="goods?action=detail&goodsId=${goods.goodsId}" class="btn-view-detail btn-detail" onclick="event.stopPropagation()">查看详情</a>
+                    <a href="goods?action=detail&goodsId=${goods.goodsId}"
+                       class="btn-view-detail"
+                       onclick="event.stopPropagation()">查看详情</a>
                 </div>
             </div>
         `;

@@ -827,7 +827,37 @@
                 </ul>
             </nav>
             <div class="nav-actions">
-                <a href="#" class="search-icon">🔍</a>
+                <div class="search-wrapper">
+                    <a href="#" class="search-icon">🔍</a>
+                    <div class="search-dropdown">
+                        <div class="search-input-container">
+                            <form action="goods" method="get" class="search-form" onsubmit="return performSearch(this);">
+                                <input type="hidden" name="action" value="search">
+                                <input type="text"
+                                       name="keyword"
+                                       class="search-input"
+                                       placeholder="搜索商品..."
+                                       id="searchInput"
+                                       autocomplete="off">
+                                <button type="submit" class="search-btn">🔍</button>
+                            </form>
+                        </div>
+                        <div class="search-content">
+                            <div class="search-suggestions" id="searchSuggestions" style="display: none;">
+                                <!-- 搜索建议将动态插入这里 -->
+                            </div>
+                            <div class="search-history" id="searchHistory">
+                                <div class="search-history-title">
+                                    <span>搜索历史</span>
+                                    <span class="clear-history" onclick="clearSearchHistory()">清除</span>
+                                </div>
+                                <div class="search-history-items" id="historyItems">
+                                    <!-- 搜索历史项将动态插入这里 -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
                 <a href="cart" class="cart-icon">
                     🛒
                     <span class="cart-count" id="cartCount">${cartCount != null ? cartCount : 0}</span>
@@ -911,6 +941,8 @@
         <p>&copy; 2025 环创店. 保留所有权利.</p>
     </footer>
 
+    <!-- 引入搜索脚本 -->
+    <script src="js/search-new.js"></script>
     <!-- 引入懒加载脚本 -->
     <script src="js/lazy-load.js"></script>
 </body>

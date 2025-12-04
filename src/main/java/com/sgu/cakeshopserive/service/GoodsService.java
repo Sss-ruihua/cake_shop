@@ -123,6 +123,26 @@ public class GoodsService {
     }
 
     /**
+     * 获取搜索建议
+     * @param keyword 搜索关键词
+     * @return 搜索建议列表结果
+     */
+    public Result<List<String>> getSearchSuggestions(String keyword) {
+        if (keyword == null || keyword.trim().isEmpty()) {
+            return Result.error("搜索关键词不能为空", Constants.CODE_PARAM_ERROR);
+        }
+
+        try {
+            List<String> suggestions = goodsDao.getSearchSuggestions(keyword.trim());
+            return Result.success(suggestions);
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            return Result.error("获取搜索建议失败：" + e.getMessage());
+        }
+    }
+
+    /**
      * 获取所有商品
      * @return 商品列表结果
      */

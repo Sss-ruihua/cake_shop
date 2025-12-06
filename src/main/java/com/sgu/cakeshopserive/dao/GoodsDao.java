@@ -423,4 +423,106 @@ public class GoodsDao {
 
         return goods;
     }
+
+    /**
+     * 分页获取热销商品
+     */
+    public PageResult<Goods> getHotGoodsPaged(int currentPage, int pageSize) {
+        List<Goods> goodsList = new ArrayList<>();
+
+        // 查询当前页数据
+        String dataSql = "SELECT g.*, t.type_name FROM goods g " +
+                        "LEFT JOIN type t ON g.type_id = t.type_id " +
+                        "INNER JOIN recommend r ON g.goods_id = r.goods_id " +
+                        "WHERE r.recommend_type = 'hot' " +
+                        "ORDER BY r.sort_order ASC, r.create_time DESC " +
+                        "LIMIT ? OFFSET ?";
+
+        // 查询总记录数
+        String countSql = "SELECT COUNT(*) FROM goods g " +
+                         "INNER JOIN recommend r ON g.goods_id = r.goods_id " +
+                         "WHERE r.recommend_type = 'hot'";
+
+        try (Connection conn = DBUtils.getConnection()) {
+            // 查询数据
+            try (PreparedStatement dataStmt = conn.prepareStatement(dataSql)) {
+                dataStmt.setInt(1, pageSize);
+                dataStmt.setInt(2, (currentPage - 1) * pageSize);
+
+                try (ResultSet rs = dataStmt.executeQuery()) {
+                    while (rs.next()) {
+                        Goods goods = extractGoodsFromResultSet(rs);
+                        goodsList.add(goods);
+                    }
+                }
+            }
+
+            // 查询总数
+            int totalCount = 0;
+            try (PreparedStatement countStmt = conn.prepareStatement(countSql);
+                 ResultSet rs = countStmt.executeQuery()) {
+                if (rs.next()) {
+                    totalCount = rs.getInt(1);
+                }
+            }
+
+            return new PageResult<>(goodsList, currentPage, pageSize, totalCount);
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+
+        return new PageResult<>(goodsList, currentPage, pageSize, 0);
+    }
+
+    /**
+     * 分页获取新品商品
+     */
+    public PageResult<Goods> getNewGoodsPaged(int currentPage, int pageSize) {
+        List<Goods> goodsList = new ArrayList<>();
+
+        // 查询当前页数据
+        String dataSql = "SELECT g.*, t.type_name FROM goods g " +
+                        "LEFT JOIN type t ON g.type_id = t.type_id " +
+                        "INNER JOIN recommend r ON g.goods_id = r.goods_id " +
+                        "WHERE r.recommend_type = 'new' " +
+                        "ORDER BY r.sort_order ASC, r.create_time DESC " +
+                        "LIMIT ? OFFSET ?";
+
+        // 查询总记录数
+        String countSql = "SELECT COUNT(*) FROM goods g " +
+                         "INNER JOIN recommend r ON g.goods_id = r.goods_id " +
+                         "WHERE r.recommend_type = 'new'";
+
+        try (Connection conn = DBUtils.getConnection()) {
+            // 查询数据
+            try (PreparedStatement dataStmt = conn.prepareStatement(dataSql)) {
+                dataStmt.setInt(1, pageSize);
+                dataStmt.setInt(2, (currentPage - 1) * pageSize);
+
+                try (ResultSet rs = dataStmt.executeQuery()) {
+                    while (rs.next()) {
+                        Goods goods = extractGoodsFromResultSet(rs);
+                        goodsList.add(goods);
+                    }
+                }
+            }
+
+            // 查询总数
+            int totalCount = 0;
+            try (PreparedStatement countStmt = conn.prepareStatement(countSql);
+                 ResultSet rs = countStmt.executeQuery()) {
+                if (rs.next()) {
+                    totalCount = rs.getInt(1);
+                }
+            }
+
+            return new PageResult<>(goodsList, currentPage, pageSize, totalCount);
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+
+        return new PageResult<>(goodsList, currentPage, pageSize, 0);
+    }
 }

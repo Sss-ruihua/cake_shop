@@ -532,6 +532,6 @@
     </footer>
 
     <!-- 引入搜索脚本 -->
-    <script src="js/search-new.js"></script>
+    <script src="js/search-enhance.js"></script>
 </body>
 </html>

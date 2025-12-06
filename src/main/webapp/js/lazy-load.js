@@ -19,7 +19,9 @@ class GoodsLazyLoader {
             endpoints: {
                 list: 'goods?action=ajaxList',
                 type: 'goods?action=ajaxType',
-                search: 'goods?action=ajaxSearch'
+                search: 'goods?action=ajaxSearch',
+                hot: 'goods?action=ajaxHot',
+                new: 'goods?action=ajaxNew'
             }
         };
 
@@ -120,7 +122,9 @@ class GoodsLazyLoader {
      * 加载更多商品
      */
     async loadMore() {
-        if (this.isLoading || !this.hasMore) return;
+        if (this.isLoading || !this.hasMore) {
+            return;
+        }
 
         this.isLoading = true;
         this.updateLoaderState('loading');
@@ -147,25 +151,14 @@ class GoodsLazyLoader {
             }
 
         } catch (error) {
+            console.error('懒加载错误:', error);
             this.handleError(error);
         } finally {
             this.isLoading = false;
         }
     }
 
-    /**
-     * 构建API URL
-     */
-    buildApiUrl() {
-        const baseUrl = this.config.endpoints[this.type];
-        const params = new URLSearchParams({
-            page: this.currentPage,
-            pageSize: this.config.pageSize,
-            ...this.params
-        });
-        return `${baseUrl}&${params.toString()}`;
-    }
-
+  
     /**
      * 处理成功加载
      */
@@ -176,14 +169,19 @@ class GoodsLazyLoader {
             skeletonContainer.remove();
         }
 
+        // 先渲染商品，无论hasMore是什么值
         if (data.goods && data.goods.length > 0) {
             this.renderGoods(data.goods);
             this.currentPage++;
         }
 
-        this.hasMore = data.hasMore;
+        // 然后根据hasMore决定是否继续加载
+        this.hasMore = typeof data.hasMore === 'boolean' ? data.hasMore : false;
 
-        if (this.hasMore) {
+        // 只有在没有商品且hasMore为false时才显示"没有更多商品"
+        if (!data.goods || data.goods.length === 0) {
+            this.updateLoaderState('empty');
+        } else if (this.hasMore) {
             this.updateLoaderState('loading');
         } else {
             this.updateLoaderState('no-more');
@@ -191,9 +189,9 @@ class GoodsLazyLoader {
 
         // 触发自定义事件
         this.dispatchEvent('loaded', {
-            goods: data.goods,
+            goods: data.goods || [],
             page: data.currentPage,
-            hasMore: data.hasMore
+            hasMore: this.hasMore
         });
     }
 
@@ -203,6 +201,7 @@ class GoodsLazyLoader {
     handleError(error) {
         console.error('懒加载错误:', error);
         this.lastError = error;
+        this.hasMore = false; // 防止无限循环
         this.updateLoaderState('error');
 
         // 触发自定义事件
@@ -229,6 +228,14 @@ class GoodsLazyLoader {
      * 创建商品元素
      */
     createGoodsElement(goods) {
+        // 如果实例有自定义模板，使用自定义模板
+        if (this.goodsCardTemplate && typeof this.goodsCardTemplate === 'function') {
+            const tempDiv = document.createElement('div');
+            tempDiv.innerHTML = this.goodsCardTemplate(goods);
+            return tempDiv.firstElementChild;
+        }
+
+        // 否则使用默认模板
         const div = document.createElement('div');
         div.className = 'product-card goods-item'; // 同时支持两个类名
         div.setAttribute('data-goods-id', goods.goodsId);
@@ -238,11 +245,11 @@ class GoodsLazyLoader {
 
         div.innerHTML = `
             <div class="product-image-container" onclick="goToDetail(event, ${goods.goodsId})">
-                <img src="${goods.coverImage || 'images/default-goods.jpg'}"
+                <img src="${goods.coverImage || 'images/apple_pie_1.jpg'}"
                      alt="${goods.goodsName}"
                      class="product-image"
                      loading="lazy"
-                     onerror="this.src='images/default-goods.jpg'">
+                     onerror="this.src='images/apple_pie_1.jpg'">
                 ${goods.typeName ? `<div class="product-category">${goods.typeName}</div>` : ''}
                 ${isOutOfStock ? '<div class="out-of-stock-overlay">暂时缺货</div>' : ''}
             </div>
@@ -278,21 +285,47 @@ class GoodsLazyLoader {
 
         switch (state) {
             case 'loading':
+                this.loader.style.display = 'block';
                 this.loader.innerHTML = `
                     <div class="loading-spinner"></div>
                     <span>${this.config.loadingText}</span>
                 `;
                 break;
             case 'no-more':
+                this.loader.style.display = 'block';
                 this.loader.innerHTML = `<span>${this.config.noMoreText}</span>`;
                 break;
             case 'error':
+                this.loader.style.display = 'block';
                 this.loader.innerHTML = `
                     <span>${this.config.errorText}</span>
                     <button class="retry-btn">${this.config.retryText}</button>
                 `;
                 break;
+            case 'empty':
+                // 空状态时隐藏loader
+                this.loader.style.display = 'none';
+                break;
         }
+    }
+
+    /**
+     * 构建API URL
+     */
+    buildApiUrl() {
+        const endpoint = this.config.endpoints[this.type] || this.config.endpoints.list;
+
+        const params = new URLSearchParams({
+            page: this.currentPage,
+            pageSize: this.config.pageSize,
+            ...this.params
+        });
+
+        // 检查endpoint是否已经包含参数
+        const separator = endpoint.includes('?') ? '&' : '?';
+        const fullUrl = `${endpoint}${separator}${params.toString()}`;
+
+        return fullUrl;
     }
 
     /**

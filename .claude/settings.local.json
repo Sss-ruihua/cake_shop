@@ -4,7 +4,8 @@
       "mcp__jimeng-mcp-v4__generate-image",
       "Bash(curl:*)",
       "Bash(find:*)",
-      "Bash(dir:*)"
+      "Bash(dir:*)",
+      "Bash(tree:*)"
     ],
     "deny": [],
     "ask": []

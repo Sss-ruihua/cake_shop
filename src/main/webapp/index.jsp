@@ -808,8 +808,8 @@
                             <a href="#">加载中...</a>
                         </div>
                     </li>
-                    <li><a href="goods?action=search&keyword=热销">热销</a></li>
-                    <li><a href="goods?action=search&keyword=新品">新品</a></li>
+                    <li><a href="goods?action=hot">热销</a></li>
+                    <li><a href="goods?action=new">新品</a></li>
                     <%
                         String username = (String) session.getAttribute("username");
                         if (username == null) {
@@ -942,7 +942,7 @@
     </footer>
 
     <!-- 引入搜索脚本 -->
-    <script src="js/search-new.js"></script>
+    <script src="js/search-enhance.js"></script>
     <!-- 引入懒加载脚本 -->
     <script src="js/lazy-load.js"></script>
 </body>

@@ -203,8 +203,8 @@
                 <ul class="nav-menu">
                     <li><a href="index.jsp">首页</a></li>
                     <li><a href="#">商品分类 ▼</a></li>
-                    <li><a href="#">热销</a></li>
-                    <li><a href="#">新品</a></li>
+                    <li><a href="goods?action=hot">热销</a></li>
+                    <li><a href="goods?action=new">新品</a></li>
                     <li><a href="register.jsp" class="active">注册</a></li>
                     <li><a href="login.jsp">登录</a></li>
                 </ul>

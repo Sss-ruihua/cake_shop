@@ -52,6 +52,12 @@ public class GoodsServlet extends HttpServlet {
                 case "type":
                     listGoodsByType(request, response);
                     break;
+                case "hot":
+                    showHotSales(request, response);
+                    break;
+                case "new":
+                    showNewArrivals(request, response);
+                    break;
                 // AJAX 分页接口
                 case "ajaxList":
                     ajaxListGoods(request, response);
@@ -64,6 +70,12 @@ public class GoodsServlet extends HttpServlet {
                     break;
                 case "ajaxSuggest":
                     ajaxGetSearchSuggestions(request, response);
+                    break;
+                case "ajaxHot":
+                    ajaxGetHotGoods(request, response);
+                    break;
+                case "ajaxNew":
+                    ajaxGetNewGoods(request, response);
                     break;
                 default:
                     listGoods(request, response);
@@ -441,6 +453,112 @@ public class GoodsServlet extends HttpServlet {
 
         json.append("]}}");
         return json.toString();
+    }
+
+    /**
+     * 显示热销商品页面
+     */
+    private void showHotSales(HttpServletRequest request, HttpServletResponse response)
+            throws ServletException, IOException {
+
+        // 获取分类信息用于显示
+        Result<GoodsService.IndexRecommendations> recommendationsResult = goodsService.getIndexRecommendations();
+        List<com.sgu.cakeshopserive.model.Type> types = recommendationsResult.isSuccess() ?
+            recommendationsResult.getData().getTypes() : null;
+
+        request.setAttribute("pageTitle", "热销商品");
+        request.setAttribute("types", types);
+        request.setAttribute("pageType", "hot");
+
+        request.getRequestDispatcher("/hot-sales.jsp").forward(request, response);
+    }
+
+    /**
+     * 显示新品商品页面
+     */
+    private void showNewArrivals(HttpServletRequest request, HttpServletResponse response)
+            throws ServletException, IOException {
+
+        // 获取分类信息用于显示
+        Result<GoodsService.IndexRecommendations> recommendationsResult = goodsService.getIndexRecommendations();
+        List<com.sgu.cakeshopserive.model.Type> types = recommendationsResult.isSuccess() ?
+            recommendationsResult.getData().getTypes() : null;
+
+        request.setAttribute("pageTitle", "新品上市");
+        request.setAttribute("types", types);
+        request.setAttribute("pageType", "new");
+
+        request.getRequestDispatcher("/new-arrivals.jsp").forward(request, response);
+    }
+
+    /**
+     * AJAX获取热销商品
+     */
+    private void ajaxGetHotGoods(HttpServletRequest request, HttpServletResponse response)
+            throws ServletException, IOException {
+
+        int page = 1;
+        int pageSize = 12;
+
+        try {
+            if (request.getParameter("page") != null) {
+                page = Integer.parseInt(request.getParameter("page"));
+                if (page < 1) page = 1;
+            }
+            if (request.getParameter("pageSize") != null) {
+                pageSize = Integer.parseInt(request.getParameter("pageSize"));
+                if (pageSize < 1 || pageSize > 50) pageSize = 12;
+            }
+        } catch (NumberFormatException e) {
+            // 使用默认值
+        }
+
+        Result<PageResult<Goods>> result = goodsService.getHotGoodsPaged(page, pageSize);
+
+        response.setContentType("application/json;charset=UTF-8");
+        PrintWriter out = response.getWriter();
+
+        if (result.isSuccess()) {
+            PageResult<Goods> pageResult = result.getData();
+            String jsonResponse = convertToJson(pageResult);
+            out.write(jsonResponse);
+        } else {
+            out.write("{\"success\":false,\"message\":\"" + escapeJson(result.getMessage()) + "\"}");
+        }
+    }
+
+    /**
+     * AJAX获取新品商品
+     */
+    private void ajaxGetNewGoods(HttpServletRequest request, HttpServletResponse response)
+            throws ServletException, IOException {
+
+        int page = 1;
+        int pageSize = 12;
+
+        try {
+            if (request.getParameter("page") != null) {
+                page = Integer.parseInt(request.getParameter("page"));
+                if (page < 1) page = 1;
+            }
+            if (request.getParameter("pageSize") != null) {
+                pageSize = Integer.parseInt(request.getParameter("pageSize"));
+                if (pageSize < 1 || pageSize > 50) pageSize = 12;
+            }
+        } catch (NumberFormatException e) {
+            // 使用默认值
+        }
+
+        Result<PageResult<Goods>> result = goodsService.getNewGoodsPaged(page, pageSize);
+
+        response.setContentType("application/json;charset=UTF-8");
+        PrintWriter out = response.getWriter();
+
+        if (result.isSuccess()) {
+            out.write(convertToJson(result.getData()));
+        } else {
+            out.write("{\"success\":false,\"message\":\"" + escapeJson(result.getMessage()) + "\"}");
+        }
     }
 
     /**

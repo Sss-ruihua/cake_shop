@@ -285,4 +285,42 @@ public class GoodsService {
             this.typeMap = typeMap;
         }
     }
+
+    /**
+     * 分页获取热销商品
+     * @param page 页码
+     * @param pageSize 每页数量
+     * @return 分页结果
+     */
+    public Result<PageResult<Goods>> getHotGoodsPaged(int page, int pageSize) {
+        if (page < 1) page = 1;
+        if (pageSize < 1 || pageSize > 50) pageSize = 12;
+
+        try {
+            PageResult<Goods> result = goodsDao.getHotGoodsPaged(page, pageSize);
+            return Result.success(result);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return Result.error("获取热销商品失败：" + e.getMessage());
+        }
+    }
+
+    /**
+     * 分页获取新品商品
+     * @param page 页码
+     * @param pageSize 每页数量
+     * @return 分页结果
+     */
+    public Result<PageResult<Goods>> getNewGoodsPaged(int page, int pageSize) {
+        if (page < 1) page = 1;
+        if (pageSize < 1 || pageSize > 50) pageSize = 12;
+
+        try {
+            PageResult<Goods> result = goodsDao.getNewGoodsPaged(page, pageSize);
+            return Result.success(result);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return Result.error("获取新品商品失败：" + e.getMessage());
+        }
+    }
 }
